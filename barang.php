@@ -268,7 +268,9 @@ $conn = new mysqli($servername, $db_username, $db_password, $database);
                 <th>Brand</th>
                 <th>Stok Tersedia</th>
                 <th>Harga Beli terakhir</th>
+                <th>PPN Beli</th>
                 <th>Harga Jual Include</th>
+                <th>PPN Jual</th>
                 <th>% Mark-up</th>
                 <th>Action</th>
             </tr>
@@ -287,6 +289,9 @@ $conn = new mysqli($servername, $db_username, $db_password, $database);
         // Pastikan nilai angka ditampilkan dengan format yang benar
 
         echo "<td style='text-align: right;'>" . number_format($row["dpp"], 2, ',', '.') . "</td>";
+        
+        $ppn_beli_text = ($row["ppn_m"] > 0) ? "11%" : "0%";
+        echo "<td style='text-align: center;'>" . $ppn_beli_text . "</td>";
  
         echo "<td style='text-align: center; white-space: nowrap;'>
                 <form method='POST' action='update_harga_jual.php' style='display:flex; align-items:center; justify-content:center; gap:5px; margin:0;'>
@@ -298,6 +303,9 @@ $conn = new mysqli($servername, $db_username, $db_password, $database);
                     </button>
                 </form>
               </td>";
+              
+        $ppn_jual_text = ($row["ppn_b"] > 0) ? "11%" : "0%";
+        echo "<td style='text-align: center;'>" . $ppn_jual_text . "</td>";
 
         // Perhitungan Mark-up (tanpa simbol % dan hanya 2 desimal)
         if ($row["dpp"] > 0) {

@@ -207,7 +207,7 @@ $ppn_beli_type = ($barang['ppn_m'] > 0) ? 11 : 0;
                 <label for="dpp">Harga Beli:</label>
                 <input type="number" id="dpp" name="dpp" value="<?= (float)$barang['dpp'] ?>" step="0.01" required>
 
-                <div style="display:none;">
+                <div>
                     <label for="ppn_beli_type">Pajak Beli (PPN):</label>
                     <select id="ppn_beli_type" name="ppn_beli_type">
                         <option value="11" <?= ($ppn_beli_type === 11) ? 'selected' : '' ?>>PPN 11%</option>
@@ -218,7 +218,7 @@ $ppn_beli_type = ($barang['ppn_m'] > 0) ? 11 : 0;
                 <label for="harga">Harga Jual:</label>
                 <input type="number" id="harga" name="harga" value="<?= (float)$barang['hargat_b'] ?>" step="0.01" required>
 
-                <div style="display:none;">
+                <div>
                     <label for="ppn_jual_type">Pajak Jual (PPN):</label>
                     <select id="ppn_jual_type" name="ppn_jual_type">
                         <option value="11" <?= ($ppn_jual_type === 11) ? 'selected' : '' ?>>PPN 11%</option>

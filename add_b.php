@@ -201,7 +201,7 @@ require_once 'config1.php';
                 <label for="dpp">Harga Beli:</label>
                 <input type="number" id="dpp" name="dpp" step="0.01" required>
 
-                <div style="display:none;">
+                <div>
                     <label for="ppn_beli_type">Pajak Beli (PPN):</label>
                     <select id="ppn_beli_type" name="ppn_beli_type">
                         <option value="11">PPN 11%</option>
@@ -212,7 +212,7 @@ require_once 'config1.php';
                 <label for="harga">Harga Jual:</label>
                 <input type="number" id="harga" name="harga" step="0.01" required>
 
-                <div style="display:none;">
+                <div>
                     <label for="ppn_jual_type">Pajak Jual (PPN):</label>
                     <select id="ppn_jual_type" name="ppn_jual_type">
                         <option value="11">PPN 11%</option>

@@ -111,7 +111,7 @@ th{background:#f2f2f2;text-align:center}
     <table>
         <thead>
             <tr>
-                <th>Kode Barang</th><th>Nama Barang</th><th>Tersedia</th><th>Jumlah</th><th>Revisi Harga</th><th>Harga</th><th>Harga Total</th><th>Garansi</th><th>Bulan</th><th>No seri</th><th>Aksi</th>
+                <th>Kode Barang</th><th>Nama Barang</th><th>Tersedia</th><th>Jumlah</th><th>Revisi Harga</th><th>Harga (DPP)</th><th>PPN</th><th>Harga Total</th><th>Garansi</th><th>Bulan</th><th>No seri</th><th>Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -122,6 +122,7 @@ th{background:#f2f2f2;text-align:center}
                 <td><input type="number" name="jumlah_k[]" min="0" value="0" oninput="calculatePPN(this);updateTotals();" required></td>
                 <td><input type="number" name="hargajual[]" class="hargajual" oninput="hitungDariHargaJual(this)"></td>
                 <td><input type="text" name="harga_k2[]" id="harga_k2" readonly required></td>
+                <td><input type="text" name="ppn_k[]" readonly required style="width:100px;"></td>
                 <td><input type="text" name="hargat_k[]" readonly required></td>
                 <td>
                     <select name="garansi[]" required>
@@ -137,7 +138,6 @@ th{background:#f2f2f2;text-align:center}
                     <input type="hidden" name="username1" value="<?php echo htmlspecialchars($username1); ?>">
                     <input type="hidden" name="harga_k[]" required>
                     <input type="hidden" name="harga_k1[]" readonly required>
-                    <input type="hidden" name="ppn_k[]" readonly required>
                     <input type="hidden" name="hargapack[]">
                     <input type="hidden" name="qpack[]">
                     <input type="hidden" name="fp" id="fp" value="1">
@@ -149,9 +149,11 @@ th{background:#f2f2f2;text-align:center}
     <button type="button" onclick="addItem()">Tambah Item</button>
 
     <div class="total-container">
-        <p>Total: <span id="totalDPP">0</span></p>
+        <p>Total DPP: <span id="totalDPP">0</span></p>
         <p>Diskon: <span id="totalDiskon">0</span></p>
-        <p>Total Setelah Diskon: <span id="totalDPPSetelahDiskon">0</span></p>
+        <p>DPP Setelah Diskon: <span id="totalDPPSetelahDiskon">0</span></p>
+        <p>Total PPN: <span id="totalPPNDisplay">0</span></p>
+        <p style="font-weight:bold; font-size:1.1em;">Grand Total: <span id="grandTotalDisplay">0</span></p>
     </div>
 
 <input type="submit" id="submitBtn" value="Simpan Transaksi">
@@ -272,6 +274,7 @@ function addItem(){
         <td><input type="number" name="jumlah_k[]" min="0" value="0" oninput="calculatePPN(this);updateTotals();" required></td>
         <td><input type="number" name="hargajual[]" class="hargajual" oninput="hitungDariHargaJual(this)"></td>
         <td><input type="text" name="harga_k2[]" readonly required></td>
+        <td><input type="text" name="ppn_k[]" readonly required style="width:100px;"></td>
         <td><input type="text" name="hargat_k[]" readonly required></td>
         <td>
             <select name="garansi[]" required>
@@ -285,7 +288,6 @@ function addItem(){
         <td><button type="button" onclick="removeItem(this)"><i class="fas fa-trash"></i></button>
             <input type="hidden" name="harga_k[]" required>
             <input type="hidden" name="harga_k1[]" readonly required>
-            <input type="hidden" name="ppn_k[]" readonly required>
             <input type="hidden" name="hargapack[]">
             <input type="hidden" name="qpack[]">
         </td>`;
@@ -480,9 +482,11 @@ function updateTotals(){
         totalSetelahDiskon + totalPPNDiskon;
 
     document.querySelector('.total-container').innerHTML = `
-        <p>Total: ${formatRibuan(totalHarga)}</p>
+        <p>Total DPP: ${formatRibuan(totalHarga)}</p>
         <p>Diskon: ${formatRibuan(totalDiskon)}</p>
-        <p>Total Setelah Diskon: ${formatRibuan(totalSetelahDiskon)}</p>
+        <p>DPP Setelah Diskon: ${formatRibuan(totalSetelahDiskon)}</p>
+        <p>Total PPN: ${formatRibuan(totalPPNDiskon)}</p>
+        <p style="font-weight:bold; font-size:1.1em;">Grand Total: ${formatRibuan(totalHargaTermasukPPN)}</p>
     `;
 
     document.getElementById('total_dpp').value =
