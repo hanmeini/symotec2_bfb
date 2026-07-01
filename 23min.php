@@ -6,7 +6,7 @@ session_start([
     'use_only_cookies' => true, // Hanya gunakan cookie untuk session (tanpa URL session ID)
     'use_strict_mode' => true, // Cegah sesi yang dicuri digunakan kembali
 ]);
-$allowed_referer_domain = "https://symotech.id/";
+
 
 // Periksa apakah HTTP_REFERER ada dan berasal dari domain yang diizinkan
 

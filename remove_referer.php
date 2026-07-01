@@ -1,5 +1,5 @@
 <?php
-$bfb_dir = 'C:/Users/X1 CARBON/OneDrive/Desktop/symotec2_bfb/';
+$bfb_dir = 'C:/Users/X1 CARBON/Downloads/symotec2_bfb/';
 $files = scandir($bfb_dir);
 
 foreach ($files as $file) {

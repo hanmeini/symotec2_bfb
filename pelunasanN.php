@@ -11,13 +11,10 @@ session_start([
 
 
 
-$allowed_referer_domain = "https://symotech.id/";
+
 
 // Periksa apakah HTTP_REFERER ada dan berasal dari domain yang diizinkan
-if (!isset($_SERVER['HTTP_REFERER']) || strpos($_SERVER['HTTP_REFERER'], $allowed_referer_domain) !== 0) {
-    header("Location: https://symotech.id");
-    exit();
-}
+
 
 
 // Periksa apakah pengguna sudah login

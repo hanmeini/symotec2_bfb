@@ -34,18 +34,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $stmt->close();
         
-        // Otomatis catat uang masuk (Pelunasan Cash) agar muncul di Laporan Pembayaran
-        $bank = 'CASH';
-        $cabang = ($_SESSION['location'] === 'HO' || $_SESSION['location'] === 'HO1') ? 'Pusat' : 'Cabang';
-        $stmtBayar = $conn->prepare("INSERT INTO pembayaranho1 (tanggal, j_value, cust, bayar, bank, userbayar, cabang) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmtBayar->bind_param("sssdsss", $tanggal, $nomor, $cust, $total_harga, $bank, $userinv, $cabang);
-        $stmtBayar->execute();
-        $stmtBayar->close();
+        // Menghapus blok auto-lunas pembayaranho1 agar sesuai dengan alur ATK (Pelunasan diproses manual)
 
         
         // Kurangi Stock beserta Harga (Akuntansi)
         $userin = $_SESSION['username'] ?? 'system';
         $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, kodeb, jumlah_k, harga_k, ppn_k, hargat_k, userid, sj, id_gudang, bulan, noseri) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        // Simpan ke transaksiHO1 (mengikuti ledger ATK HO)
+        $stmtTransaksi = $conn->prepare("INSERT INTO transaksiHO1 (tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k, user, sj, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
         foreach ($kode_b as $i => $kode) {
             if (empty($kode)) continue;
@@ -76,15 +73,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtStock->bind_param("ssddddssiis", $tanggal, $kode, $qty, $hrg, $pjk, $tot, $userin, $nomor, $id_gudang, $bln, $ns);
             $stmtStock->execute();
             
+            // Simpan ke transaksiHO1
+            $stmtTransaksi->bind_param("sssssddddssi", $tanggal, $nomor, $cust, $kode, $nama, $qty, $hrg, $pjk, $tot, $userin, $nomor, $id_gudang);
+            $stmtTransaksi->execute();
+            
             // Recalculate stock history for this item
             recalculate_stock_history($conn, $kode);
         }
         $stmtStock->close();
+        $stmtTransaksi->close();
         
         $conn->commit();
         echo "<script>
-            alert('Transaksi Penjualan Berhasil disimpan! Nomor: $nomor');
-            window.location.href = 'pos.php" . ($id_gudang > 0 ? "?id_gudang=$id_gudang" : "") . "';
+            alert('Transaksi Penjualan Berhasil disimpan! Mengarahkan ke Pelunasan...');
+            window.location.href = 'pelunasan.php?J=$nomor';
         </script>";
         
     } catch (Exception $e) {
