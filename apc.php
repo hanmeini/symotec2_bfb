@@ -229,7 +229,20 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         ========================================================= */
 
         $stmtJurnal = $conn->prepare("
-            INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit) VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO jurnal
+            (
+                jurnal_sementara,
+                tanggal,
+                keterangan,
+                coa,
+                account_name,
+                debet,
+                kredit,
+                kode_booking,
+                supcust
+            )
+            VALUES
+            (?,?,?,?,?,?,?,?,?)
         ");
 
         if(!$stmtJurnal){
@@ -247,13 +260,16 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $kredit_hutang = 0;
 
         $stmtJurnal->bind_param(
-            "ssssdd",
+            "sssssddss",
             $kodeCOS,
             $tanggal,
             $keterangan,
             $coa_hutang,
+            $nama_hutang,
             $debet_hutang,
-            $kredit_hutang
+            $kredit_hutang,
+            $jurnal_pembelian,
+            $sup
         );
 
         $stmtJurnal->execute();
@@ -267,13 +283,16 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $kredit_cash = $bayar;
 
         $stmtJurnal->bind_param(
-            "ssssdd",
+            "sssssddss",
             $kodeCOS,
             $tanggal,
             $keterangan,
             $coa_cash,
+            $nama_cash,
             $debet_cash,
-            $kredit_cash
+            $kredit_cash,
+            $jurnal_pembelian,
+            $sup
         );
 
         $stmtJurnal->execute();
@@ -289,14 +308,17 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
             $kredit_pph = $pph;
 
             $stmtJurnal->bind_param(
-            "ssssdd",
-            $kodeCOS,
-            $tanggal,
-            $keterangan,
-            $coa_pph,
-            $debet_pph,
-            $kredit_pph
-        );
+                "sssssddss",
+                $kodeCOS,
+                $tanggal,
+                $keterangan,
+                $coa_pph,
+                $nama_pph,
+                $debet_pph,
+                $kredit_pph,
+                $jurnal_pembelian,
+                $sup
+            );
 
             $stmtJurnal->execute();
         }
