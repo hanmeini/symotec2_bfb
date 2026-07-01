@@ -555,7 +555,7 @@ footer p {
                   
    <div class="container">
 
-    <h1 id="animated-heading">PT. MITRA KARYA BAHAGIA</h1>
+    <h1 id="animated-heading">PT. BFB</h1>
 
     <section id="hero">
         <div class="icons">

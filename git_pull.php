@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Git Deployer - MKB</title>
+    <title>Git Deployer - BFB</title>
     <link href="assets/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <style>
@@ -244,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center gap-2" href="home.php">
                 <span class="brand-mark"><i class="fa-solid fa-cart-shopping"></i></span>
-                <span>MKB</span>
+                <span>BFB</span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a href="karyawan.php" class="btn btn-outline-light btn-sm">

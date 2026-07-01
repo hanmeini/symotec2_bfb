@@ -46,7 +46,7 @@ $menus = [
     ]
 ];
 
-echo "<h3>Memulai Install / Sync Menu MKB...</h3><hr>";
+echo "<h3>Memulai Install / Sync Menu BFB...</h3><hr>";
 
 foreach ($menus as $m) {
     // Check if menu with the same file name already exists

@@ -28,7 +28,7 @@ if ($view_id > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Riwayat Gaji - MKB</title>
+    <title>Riwayat Gaji - BFB</title>
     <link href="assets/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <link href="assets/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -86,7 +86,7 @@ if ($view_id > 0) {
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center gap-2" href="home.php">
                 <span class="brand-mark"><i class="fa-solid fa-cart-shopping"></i></span>
-                <span>MKB</span>
+                <span>BFB</span>
             </a>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <a href="absen.php" class="btn btn-outline-light btn-sm">
@@ -246,7 +246,7 @@ if ($view_id > 0) {
                 <div class="modal-body p-0" id="printArea">
                     <div class="slip-gaji mx-auto" style="max-width: 800px;">
                         <div class="text-center mb-4 pb-3 border-bottom">
-                            <h2 class="mb-1 fw-bold text-dark" style="letter-spacing:1px;">PT. MKB</h2>
+                            <h2 class="mb-1 fw-bold text-dark" style="letter-spacing:1px;">PT. BFB</h2>
                             <p class="mb-0 text-muted">Slip Gaji Karyawan Terkunci</p>
                         </div>
                         

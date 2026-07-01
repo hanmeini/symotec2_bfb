@@ -92,8 +92,8 @@ function h($v) {
 
     <div class="header">
         <div class="logo-area">
-            <h1>PT MITRA KARYA BAHAGIA</h1>
-            <p>Sistem Manajemen Gudang MKB</p>
+            <h1>PT BFB</h1>
+            <p>Sistem Manajemen Gudang BFB</p>
         </div>
         <div class="title-area">
             <h2>SURAT JALAN</h2>

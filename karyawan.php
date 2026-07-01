@@ -220,7 +220,7 @@ function goExport(){
         <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
             <a class="navbar-brand d-flex align-items-center gap-2" href="home.php">
                 <span class="brand-mark"><i class="fa-solid fa-cart-shopping"></i></span>
-                <span>MKB</span>
+                <span>BFB</span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a href="absen.php" class="btn btn-outline-light btn-sm">

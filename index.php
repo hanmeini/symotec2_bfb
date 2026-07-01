@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <form action="" method="POST">
-    <h1 style="text-align:center;">PT MITRA KARYA BAHAGIA</h1>
+    <h1 style="text-align:center;">PT BFB</h1>
 
     <input type="text" name="username" placeholder="Masukkan username" required>
 

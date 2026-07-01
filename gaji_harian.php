@@ -146,7 +146,7 @@ $total_rates = count($rates);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Standar Gaji Harian - MKB</title>
+    <title>Standar Gaji Harian - BFB</title>
     <link href="assets/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <link href="assets/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -259,7 +259,7 @@ $total_rates = count($rates);
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center gap-2" href="home.php">
                 <span class="brand-mark"><i class="fa-solid fa-cart-shopping"></i></span>
-                <span>MKB</span>
+                <span>BFB</span>
             </a>
             <div class="d-flex align-items-center gap-2">
                 <a href="absen.php" class="btn btn-outline-light btn-sm">

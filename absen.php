@@ -591,7 +591,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['absen_file'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rekap Absensi & Gaji - MKB</title>
+    <title>Rekap Absensi & Gaji - BFB</title>
     <link href="assets/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <link href="assets/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -698,7 +698,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['absen_file'])) {
         <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center gap-2" href="home.php">
                 <span class="brand-mark"><i class="fa-solid fa-cart-shopping"></i></span>
-                <span>MKB</span>
+                <span>BFB</span>
             </a>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <a href="absen.php" class="btn btn-outline-light btn-sm">
@@ -932,7 +932,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['absen_file'])) {
                 <div class="modal-body p-0" id="printArea">
                     <div class="slip-gaji p-4">
                         <div class="text-center mb-4 border-bottom pb-3">
-                            <h4 class="mb-1 fw-bold text-dark">PT. MKB</h4>
+                            <h4 class="mb-1 fw-bold text-dark">PT. BFB</h4>
                             <p class="mb-0 text-muted" style="font-size: 0.9rem; letter-spacing: 2px;">SLIP GAJI KARYAWAN</p>
                         </div>
                         <table class="table table-borderless table-sm mb-4" style="font-size: 0.9rem;">
