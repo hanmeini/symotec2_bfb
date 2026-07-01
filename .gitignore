@@ -1,0 +1,30 @@
+# Kredensial dan Environment Variables
+.env
+
+# Folder dependencies (opsional, sesuaikan jika Anda menggunakan composer)
+# vendor/
+# vendor1/
+
+# Konfigurasi IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# File sistem OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files & uploads
+temp/
+uploads/
+schema_check_temp3.php
+
