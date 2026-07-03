@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-    <img src="logo.png" alt="" style="width: 150px; height: 150px; border-radius: 50%; display: block; margin-bottom: 20px;">
+    <img src="assets/img/logo.png" alt="" style="width: 150px; height: 150px; border-radius: 50%; display: block; margin-bottom: 20px;">
 <form action="" method="POST">
     <h1 style="text-align:center;">PT BFB</h1>
 
