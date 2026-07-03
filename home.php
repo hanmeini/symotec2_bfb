@@ -543,13 +543,12 @@ footer p {
    
       
         
-<header style="position: fixed;">
-<img src="assets/img/logo.png" alt="Logo" width="100" style="position: absolute; left: 10px; top: 10px;">
-   <a href="logout.php" class="left-icon" style="position: absolute; right: 20px; font-size: 24px; text-decoration: none; color: red;">
-        <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i>
-      <p>logout</p>
-</a>
-    
+<header style="position: fixed; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; z-index: 1000; box-sizing: border-box;">
+    <img src="assets/img/logo.png" alt="Logo" width="100">
+    <a href="logout.php" style="text-decoration: none; color: red; display: flex; flex-direction: column; align-items: center;">
+        <i class="fa-solid fa-person-walking-dashed-line-arrow-right" style="font-size: 24px;"></i>
+        <p style="margin: 5px 0 0; font-size: 14px; font-weight: bold;">logout</p>
+    </a>
 </header>
 
 
