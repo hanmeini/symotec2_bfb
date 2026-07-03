@@ -153,6 +153,11 @@ function cekNIK(){
 }
 </script>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 </head>
 <body>
 
@@ -171,19 +176,21 @@ function cekNIK(){
 </select>
 
 <label class="label">Departemen</label>
-<select name="dept" required>
+<select name="dept" id="dept" required>
     <option value="">-- Pilih Departemen --</option>
     <?php while($d = $depList->fetch_assoc()): ?>
         <option value="<?= $d['id'] ?>"><?= e($d['nama_bagian']) ?></option>
     <?php endwhile; ?>
+    <option value="_LAINNYA_" style="color: #007bff; font-weight: bold;">+ Tambah Baru</option>
 </select>
 
 <label class="label">Jabatan</label>
-<select name="jabatan" required>
+<select name="jabatan" id="jabatan" required>
     <option value="">-- Pilih Jabatan --</option>
     <?php while($j = $jabList->fetch_assoc()): ?>
         <option value="<?= $j['idj'] ?>"><?= e($j['jabatan']) ?></option>
     <?php endwhile; ?>
+    <option value="_LAINNYA_" style="color: #007bff; font-weight: bold;">+ Tambah Baru</option>
 </select>
 
 <label class="label">Tanggal Masuk</label>
@@ -229,16 +236,16 @@ function cekNIK(){
 <input type="text" name="bpjs_tk">
 
 <label class="label">Jenis Gaji</label>
-<select name="jenis_gaji" required>
+<select name="jenis_gaji" id="jenis_gaji" required>
     <option value="bulanan">Bulanan</option>
     <option value="mingguan">Mingguan</option>
 </select>
 
 <label class="label">Gaji Pokok</label>
-<input type="number" step="0.01" name="gaji_pokok">
+<input type="number" step="0.01" name="gaji_pokok" id="gaji_pokok">
 
 <label class="label">Upah Lembur</label>
-<input type="number" step="0.01" name="upah_lembur">
+<input type="number" step="0.01" name="upah_lembur" id="upah_lembur">
 
 <label class="label">Foto Karyawan</label>
 <input type="file" name="foto" onchange="previewImg(this,'prev_foto')">
@@ -257,6 +264,86 @@ function cekNIK(){
 
 </form>
 </div>
+
+<?php
+// Fetch rates for auto-fill
+$rates_map = [];
+$r_map = $conn->query("SELECT dept, jabatan, MAX(gaji_harian) as gaji_harian, MAX(upah_lembur_jam) as upah_lembur_jam FROM rate_gaji_harian GROUP BY dept, jabatan");
+if ($r_map) {
+    while($r = $r_map->fetch_assoc()){
+        $rates_map[strtoupper(trim($r['dept'])) . '|' . strtoupper(trim($r['jabatan']))] = [
+            'gaji' => (float)$r['gaji_harian'],
+            'lembur' => (float)$r['upah_lembur_jam']
+        ];
+    }
+}
+$rates_json = json_encode($rates_map);
+?>
+<div id="json-data" style="display:none;" data-rates="<?= htmlspecialchars(empty($rates_json) || $rates_json === '[]' ? '{}' : $rates_json, ENT_QUOTES, 'UTF-8') ?>"></div>
+
+<script>
+$(document).ready(function() {
+    let salaryRates = {};
+    try {
+        let rawRates = $('#json-data').attr('data-rates');
+        if (rawRates) salaryRates = JSON.parse(rawRates);
+    } catch(e) { console.error(e); }
+
+    function updateSalary() {
+        let deptText = $('#dept option:selected').text().trim().toUpperCase();
+        let jabText = $('#jabatan option:selected').text().trim().toUpperCase();
+        if (deptText && jabText && deptText !== '-- PILIH DEPARTEMEN --' && jabText !== '-- PILIH JABATAN --' && deptText !== '+ TAMBAH BARU' && jabText !== '+ TAMBAH BARU') {
+            let key = deptText + '|' + jabText;
+            if (salaryRates[key]) {
+                $('#gaji_pokok').val(salaryRates[key].gaji);
+                $('#upah_lembur').val(salaryRates[key].lembur);
+            }
+        }
+    }
+
+    $('#dept').on('change', function() {
+        if (this.value === '_LAINNYA_') {
+            $(this).val('');
+            Swal.fire({
+                title: 'Departemen Baru', input: 'text', inputPlaceholder: 'Ketik nama departemen...',
+                showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed && result.value.trim() !== '') {
+                    let newVal = result.value.trim().toUpperCase();
+                    $.post('ajax_add_master.php', { type: 'dept', name: newVal }, function(res) {
+                        if (res.status === 'success') {
+                            $('<option>').val(res.id).text(res.text).insertBefore($('#dept option[value="_LAINNYA_"]'));
+                            $('#dept').val(res.id);
+                            updateSalary();
+                        } else { Swal.fire('Error', res.message, 'error'); }
+                    }).fail(function() { Swal.fire('Error', 'Gagal menyimpan', 'error'); });
+                }
+            });
+        } else { updateSalary(); }
+    });
+
+    $('#jabatan').on('change', function() {
+        if (this.value === '_LAINNYA_') {
+            $(this).val('');
+            Swal.fire({
+                title: 'Jabatan Baru', input: 'text', inputPlaceholder: 'Ketik nama jabatan...',
+                showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed && result.value.trim() !== '') {
+                    let newVal = result.value.trim().toUpperCase();
+                    $.post('ajax_add_master.php', { type: 'jabatan', name: newVal }, function(res) {
+                        if (res.status === 'success') {
+                            $('<option>').val(res.id).text(res.text).insertBefore($('#jabatan option[value="_LAINNYA_"]'));
+                            $('#jabatan').val(res.id);
+                            updateSalary();
+                        } else { Swal.fire('Error', res.message, 'error'); }
+                    }).fail(function() { Swal.fire('Error', 'Gagal menyimpan', 'error'); });
+                }
+            });
+        } else { updateSalary(); }
+    });
+});
+</script>
 
 </body>
 </html>

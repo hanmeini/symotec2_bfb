@@ -500,6 +500,7 @@ footer p {
     .icons {
         padding: 10px; /* Lebihkan sedikit ruang bernafas di HP */
         gap: 15px; /* Jarak antar kotak disesuaikan */
+        grid-template-columns: repeat(3, 1fr);
     }
 
     .icon {
@@ -543,7 +544,7 @@ footer p {
       
         
 <header style="position: fixed;">
-<img src="logo.png" alt="Logo" width="100" style="position: absolute; left: 10px; top: 10px;">
+<img src="assets/img/logo.png" alt="Logo" width="100" style="position: absolute; left: 10px; top: 10px;">
    <a href="logout.php" class="left-icon" style="position: absolute; right: 20px; font-size: 24px; text-decoration: none; color: red;">
         <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i>
       <p>logout</p>
@@ -605,7 +606,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     for (var i = 0; i < text.length; i++) {
         var span = document.createElement('span');
-        span.textContent = text[i];
+        span.innerHTML = text[i] === ' ' ? '&nbsp;' : text[i];
         span.classList.add('animated-text');
         span.style.animationDelay = (i * 0.1) + 's';
         heading.appendChild(span);

@@ -149,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -184,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
+    <img src="logo.png" alt="" style="width: 150px; height: 150px; border-radius: 50%; display: block; margin-bottom: 20px;">
 <form action="" method="POST">
     <h1 style="text-align:center;">PT BFB</h1>
 

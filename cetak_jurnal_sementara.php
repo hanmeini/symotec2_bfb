@@ -2,7 +2,18 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-session_start();
+session_start([
+    'cookie_lifetime' => 86400,
+    'cookie_httponly' => true,
+    'cookie_secure' => isset($_SERVER['HTTPS']),
+    'use_only_cookies' => true,
+    'use_strict_mode' => true,
+]);
+
+// ================= VALIDASI REFERER =================
+
+
+
 
 // ================= VALIDASI LOGIN =================
 if (!isset($_SESSION['username'])) {
@@ -13,6 +24,8 @@ if (!isset($_SESSION['username'])) {
 // ================= LOAD CONFIG =================
 require_once 'config1.php';
 
+// KONEKSI DB sudah di-handle oleh config1.php
+
 // ================= AMBIL PARAMETER =================
 $jurnal_sementara = $_GET['kode_transaksi'] ?? '';
 
@@ -21,6 +34,7 @@ $sql = "
     SELECT 
         j.id,
         j.journal_number,
+        j.jurnal_sementara,
         j.tanggal,
         j.keterangan,
         j.lampiran,
@@ -28,10 +42,14 @@ $sql = "
         c.account_name AS nama_akun,
         j.debet,
         j.kredit,
-        j.posting
+        j.posting,
+        j.kode_booking,
+        j.supcust,
+        s.nama AS nama_supcust
     FROM jurnal j
     LEFT JOIN coa c ON j.coa = c.account_code
-    WHERE j.journal_number LIKE ?
+    LEFT JOIN sup s ON j.supcust = s.kode
+    WHERE j.jurnal_sementara LIKE ?
 ";
 
 $stmt = $conn->prepare($sql);
@@ -48,10 +66,12 @@ $data = [];
 while ($row = $result->fetch_assoc()) {
     $data[] = [
         'id' => $row['id'],
-        'journal_number' => $row['journal_number'],
+        'jurnal_sementara' => $row['jurnal_sementara'],
         'tanggal' => $row['tanggal'],
         'keterangan' => $row['keterangan'],
         'lampiran' => $row['lampiran'],
+        'supcust' => $row['supcust'] ?? '',
+        'nama_supcust' => $row['nama_supcust'] ?? 'Tidak ditemukan',
         'coa' => $row['coa'],
         'account_name' => $row['nama_akun'] ?? 'Tidak ditemukan',
         'debet' => $row['debet'],
@@ -83,7 +103,7 @@ $conn->close();
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
-            font-size: 14px;
+            font-size: 14px; /* Smaller font for body */
         }
         .container {
             width: 80%;
@@ -97,7 +117,7 @@ $conn->close();
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            font-size: 13px;
+            font-size: 13px; /* Smaller font for table */
         }
         th, td {
             padding: 8px 12px;
@@ -114,7 +134,7 @@ $conn->close();
         h2 {
             text-align: center;
             color: #333;
-            font-size: 18px;
+            font-size: 18px; /* Adjusted font size */
         }
         .total-row {
             font-weight: bold;
@@ -122,12 +142,21 @@ $conn->close();
         }
         .signature-row {
             padding-top: 20px;
-            font-size: 12px;
+            font-size: 12px; /* Smaller font for signature section */
         }
         .signature-row label {
             display: inline-block;
             width: 200px;
         }
+        .signature-row input {
+            width: 250px;
+            text-align: center;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 12px; /* Smaller font for input fields */
+        }
+        /* Styling for print */
         @media print {
             body * {
                 visibility: hidden;
@@ -142,6 +171,8 @@ $conn->close();
                 width: 100%;
             }
         }
+
+        /* Styling for Print Button */
         .print-button {
             background-color: #4CAF50;
             color: white;
@@ -153,26 +184,28 @@ $conn->close();
             text-align: center;
             transition: background-color 0.3s ease;
         }
+
         .print-button:hover {
             background-color: #45a049;
         }
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 10px;
-        }
-        .two-columns div {
-            background-color: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-        .two-columns p {
-            margin: 0;
-            color: #333;
-            font-size: 14px;
-        }
+            .two-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Dua kolom dengan ukuran sama */
+        gap: 20px; /* Jarak antar kolom */
+        padding: 10px;
+    }
+    .two-columns div {
+        background-color: #f9f9f9;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+    .two-columns p {
+        margin: 0;
+        color: #333;
+        font-size: 14px;
+    
+    }
         .home-icon1, .left-icon {
             position: absolute;
             top: 0;
@@ -196,17 +229,22 @@ $conn->close();
         <i class='fa-solid fa-circle-left'></i>
     </a>
     <div class="container">
-        <h2>Jurnal Pengajuan Approval</h2>
+        <h2>Jurnal Pengajuan Aproval</h2>
 <div class="two-columns">
     <?php if (!empty($data)) { ?>
         <div>
-            <p>Nomor Pengajuan: <?php echo htmlspecialchars($data[0]['journal_number'] ?? ''); ?></p>
+            <p>Nomor Pengajuan: <?php echo htmlspecialchars($data[0]['jurnal_sementara'] ?? ''); ?></p>
             <p>Tanggal: <?php echo htmlspecialchars($data[0]['tanggal'] ?? ''); ?></p>
+        </div>
+        <div>
+            <p>Supplier: <?php echo htmlspecialchars($data[0]['nama_supcust'] ?? ''); ?></p>
+         
         </div>
     <?php } ?>
 </div>
 
 <?php
+
 if (!empty($data)) {
     echo '<p> Lampiran : ' . htmlspecialchars($data[0]['lampiran'] ?? '') . '</p>';
 }
@@ -220,6 +258,7 @@ if (!empty($data)) {
                         <th>Nama Akun</th>
                         <th>Debet</th>
                         <th>Kredit</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
@@ -235,16 +274,18 @@ if (!empty($data)) {
                             <td><?php echo htmlspecialchars($row['account_name'] ?? ''); ?></td>
                             <td style="text-align: right;"><?php echo number_format($row['debet'] ?? 0, 2); ?></td>
                             <td style="text-align: right;"><?php echo number_format($row['kredit'] ?? 0, 2); ?></td>
+                           
                         </tr>
                     <?php } ?>
                      <tr class="total-row">
                             <td colspan="2" style="text-align: right;">Total</td>
                             <td style="text-align: right;"><?php echo number_format($totalDebet, 2); ?></td>
                             <td style="text-align: right;"><?php echo number_format($totalKredit, 2); ?></td>
+                            <td></td>
                         </tr>
                         <tr class="total-row">
                             <td colspan="1" style="text-align: right;">Selisih</td>
-                            <td colspan="2" style="text-align: right;"><?php echo number_format($totalDebet - $totalKredit, 2); ?></td>
+                            <td colspan="2" style="text-align: right;"><?php echo number_format($totalDebet - $totalKredit,2); ?></td>
                         </tr>
                         <tr>
     <td colspan="6">
@@ -258,16 +299,25 @@ if (!empty($data)) {
             <p><?php echo htmlspecialchars($message); ?></p>
         <?php } ?>
         
+        <!-- Tanda Tangan di bawah tabel dan total -->
      <div class="signature-row">
     <label for="staff_sign">Staff Acc: (.........................)</label>
-    &nbsp;&nbsp;
+ 
+    &nbsp;&nbsp; <!-- Spasi antara kolom -->
+
     <label for="man_sign">Manager Acc: (.........................)</label>
-    &nbsp;&nbsp;
+        &nbsp;&nbsp; <!-- Spasi antara kolom -->
+
     <label for="man_sign">Direktur: (.........................)</label>
+    
 </div>
    </div>
+        <!-- Tombol Print -->
         <div style="text-align: center; margin-top: 20px;">
             <button class="print-button" onclick="printPage()">Print</button>
+            
+           
+
     </div>
 
     <script>
