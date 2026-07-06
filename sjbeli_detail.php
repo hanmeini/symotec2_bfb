@@ -110,84 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtUpdStk->execute();
             $stmtUpdStk->close();
 
-            // Cari dpp terakhir sebelumnya
-            $sqlDppPrev = "SELECT dpp FROM transaksiHO1 
-                           WHERE kode_b=? AND jumlah_k>0 AND tanggal_transaksi < ?
-                           ORDER BY tanggal_transaksi DESC LIMIT 1";
-            $stmtPrev = $conn->prepare($sqlDppPrev);
-            $stmtPrev->bind_param("ss", $kode_b, $tgl_transaksi);
-            $stmtPrev->execute();
-            $stmtPrev->bind_result($dpp_last);
-            $dpp = 0;
-            if ($stmtPrev->fetch()) {
-                $dpp = $dpp_last;
-            }
-            $stmtPrev->close();
-
-            // Hitung saldo akhir
-            $sqlSaldo = "SELECT COALESCE(SUM(jumlah_m - jumlah_k),0) FROM transaksiHO1 
-                         WHERE kode_b=? AND tanggal_transaksi < ?";
-            $stmtSaldo = $conn->prepare($sqlSaldo);
-            $stmtSaldo->bind_param("ss", $kode_b, $tgl_transaksi);
-            $stmtSaldo->execute();
-            $stmtSaldo->bind_result($saldo_akhir);
-            $stmtSaldo->fetch();
-            $stmtSaldo->close();
-
-            $saldo_awal = $dpp * $saldo_akhir;
-            $dasar_dpp  = ($saldo_akhir + $jumlah_m) > 0 ? 
-                          ($saldo_awal + $harga_m) / ($saldo_akhir + $jumlah_m) : 0;
-
-            $currentDate  = $tgl_transaksi;
-            $currentDasar = $dasar_dpp;
-
-            while (true) {
-                $sqlNext = "SELECT id_transaksi, jumlah_m, jumlah_k, tanggal_transaksi, harga_m
-                            FROM transaksiHO1 
-                            WHERE kode_b=? AND tanggal_transaksi > ?
-                            ORDER BY tanggal_transaksi ASC LIMIT 1";
-                $stmtNext = $conn->prepare($sqlNext);
-                $stmtNext->bind_param("ss", $kode_b, $currentDate);
-                $stmtNext->execute();
-                $stmtNext->bind_result($next_id, $next_m, $next_k, $next_date, $next_harga);
-                if (!$stmtNext->fetch()) {
-                    $stmtNext->close();
-                    break;
-                }
-                $stmtNext->close();
-
-                if ($next_k > 0) {
-                    $nilai_dpp = $currentDasar * $next_k;
-                    $sqlUpd2 = "UPDATE transaksiHO1 SET dpp=? WHERE id_transaksi=?";
-                    $stmtUpd2 = $conn->prepare($sqlUpd2);
-                    $stmtUpd2->bind_param("di", $nilai_dpp, $next_id);
-                    $stmtUpd2->execute();
-                    $stmtUpd2->close();
-                }
-
-                if ($next_m > 0) {
-                    $sqlSaldo2 = "SELECT COALESCE(SUM(jumlah_m - jumlah_k),0) FROM transaksiHO1 
-                                  WHERE kode_b=? AND tanggal_transaksi < ?";
-                    $stmtSaldo2 = $conn->prepare($sqlSaldo2);
-                    $stmtSaldo2->bind_param("ss", $kode_b, $next_date);
-                    $stmtSaldo2->execute();
-                    $stmtSaldo2->bind_result($saldo2);
-                    $stmtSaldo2->fetch();
-                    $stmtSaldo2->close();
-
-                    $saldo_awal2 = $currentDasar * $saldo2;
-                    $dasar_dpp2  = ($saldo2 + $next_m) > 0 ? 
-                                   ($saldo_awal2 + $next_harga) / ($saldo2 + $next_m) : 0;
-
-                    $currentDasar = $dasar_dpp2;
-                }
-
-                $currentDate = $next_date;
-            }
-
-            $sqlUpdB = "UPDATE b SET dpp=? WHERE kode_b=?";
+            // Update harga terakhir di master barang
+            $sqlUpdB = "UPDATE b SET harga_m=?, ppn_m=?, hargat_m=? WHERE kode_b=?";
             $stmtB = $conn->prepare($sqlUpdB);
-            $stmtB->bind_param("ds", $beliterakhir, $kode_b);
+            $stmtB->bind_param("ddds", $harga_m, $ppn_m, $hargat, $kode_b);
             $stmtB->execute();
             $stmtB->close();
             

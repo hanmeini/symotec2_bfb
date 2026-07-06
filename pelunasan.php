@@ -24,18 +24,17 @@ if (!isset($_SESSION['userid'])) {
     exit();
 }
 
-// Periksa apakah session location adalah 'HO' atau 'HO1'
-if ($_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
-    // Jika lokasi bukan 'HO' atau 'HO1', redirect ke halaman login
-    header("Location: index.html");
-    exit();
+// Menentukan apakah user adalah sales
+$is_sales = false;
+if (isset($_SESSION['location']) && $_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
+    $is_sales = true;
 }
 require_once 'config1.php';
 
 // Konfigurasi koneksi database
 $servername = getenv('DB_HOST') ?: die("Kesalahan: DB_HOST tidak ditemukan.");
 $db_username = getenv('DB_USER') ?: die("Kesalahan: DB_USER tidak ditemukan.");
-$db_password = getenv('DB_PASS') ?: die("Kesalahan: DB_PASS tidak ditemukan.");
+$db_password = getenv('DB_PASS');
 $database = getenv('DB_NAME') ?: die("Kesalahan: DB_NAME tidak ditemukan.");
 
 $conn = new mysqli($servername, $db_username, $db_password, $database);
@@ -55,14 +54,20 @@ if (isset($_GET['J'])) {
     $j_value = $_GET['J'];
 
     // Query untuk mengambil data transaksi berdasarkan 'J'
-    $sql = "SELECT tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, bank, bayar, sisa 
+    $sql = "SELECT tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, bank, bayar, sisa, userinv 
             FROM penjualanHO1 WHERE J = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $j_value);
     $stmt->execute();
-    $stmt->bind_result($tanggal_transaksi, $j_value, $cust, $diskon, $harga, $ppn, $jumlah, $bank, $bayar, $sisa);
+    $stmt->bind_result($tanggal_transaksi, $j_value, $cust, $diskon, $harga, $ppn, $jumlah, $bank, $bayar, $sisa, $userinv);
     $stmt->fetch();
     $stmt->close();
+    
+    // Verifikasi kepemilikan untuk sales
+    if ($is_sales && $userinv !== $_SESSION['username']) {
+        echo "<script>alert('Akses Ditolak: Anda hanya dapat memproses pelunasan untuk penjualan Anda sendiri.'); window.location.href='ap_sales.php';</script>";
+        exit();
+    }
 } else {
     echo "Kode transaksi tidak ditemukan.";
     exit();
@@ -110,38 +115,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $update_stmt->bind_param("dssdds", $bayar_input, $bank_input, $userbayar_input, $uang, $kembalian, $j_value);
     $update_stmt->execute();
 
-    if ($update_stmt->affected_rows > 0) {
-        // Insert ke tabel bayar
-        $jenis = 'pelunasan_piutang';
-    $insert_sql = "INSERT INTO kas (tanggal, no, keterangan, debet, bank, username, jenis) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $insert_stmt = $conn->prepare($insert_sql);
-    $insert_stmt->bind_param(
-        "sssssss",
-        $tanggal,
-        $j_value,
-        $cust,
-        $bayar1,
-        $bank_input,
-        $userbayar_input,
-       $jenis
-        );
-    if ($insert_stmt->execute()) {
+    if ($update_stmt->affected_rows > 0 || $update_stmt->errno === 0) {
+        $update_stmt->close();
+        
+        // ===================================
+        // JURNAL B: PELUNASAN KAS SALES
+        // ===================================
+        $coa_kas_sales = '111105'; // default
+        $stmt_kas = $conn->prepare("
+            SELECT coa_kas FROM master_sales s 
+            JOIN me u ON s.userid = u.userid 
+            WHERE u.username = ? LIMIT 1
+        ");
+        $stmt_kas->bind_param("s", $userbayar_input);
+        $stmt_kas->execute();
+        $res_kas = $stmt_kas->get_result();
+        if($row_kas = $res_kas->fetch_assoc()){
+            if(!empty($row_kas['coa_kas'])) {
+                $coa_kas_sales = $row_kas['coa_kas'];
+            }
+        }
+        $stmt_kas->close();
+
+        $ket_jurnal = "Pelunasan POS " . $j_value . " oleh " . $userbayar_input;
+        $nomor_lunas = "LUNAS-" . $j_value . "-" . time(); // avoid duplicate if partial
+
+        $stmt_jurnal = $conn->prepare("INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit, kode_booking) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+        // 1. Debet: Kas Sales
+        $d = $bayar1; $k = 0;
+        $coa = $coa_kas_sales;
+        $stmt_jurnal->bind_param("ssssdds", $nomor_lunas, $tanggal, $ket_jurnal, $coa, $d, $k, $j_value);
+        $stmt_jurnal->execute();
+
+        // 2. Kredit: 11201 Piutang
+        $d = 0; $k = $bayar1;
+        $coa = '11201';
+        $stmt_jurnal->bind_param("ssssdds", $nomor_lunas, $tanggal, $ket_jurnal, $coa, $d, $k, $j_value);
+        $stmt_jurnal->execute();
+
+        $stmt_jurnal->close();
+
         // ✅ Munculkan alert & redirect ke nota.php
         echo "<script>
-            alert('Data berhasil disimpan dengan kode transaksi: {$j_value}');
+            alert('Data pelunasan berhasil disimpan dengan kode transaksi: {$j_value}');
             window.location.href = 'nota.php?J={$j_value}';
         </script>";
         exit();
     } else {
-        echo "Gagal menyimpan pelunasan: " . $insert_stmt->error;
+        echo "Gagal memperbarui pelunasan: " . $update_stmt->error;
+        $update_stmt->close();
     }
-    $insert_stmt->close();
-} else {
-    echo "Gagal memperbarui pelunasan.";
-}
-
-    $update_stmt->close();
 }
 
 $conn->close();
@@ -208,8 +232,6 @@ $conn->close();
     <a href="home.php" class="left-icon">
         <i class="fa-solid fa-circle-left"></i>
     </a>
-
-    <h1>kasir: <?php echo $_SESSION['username']; ?></h1>
     <form method="POST" action="">
         <label for="tanggal">Tanggal Pembayaran:</label>
         <input type="date" id="tanggal" name="tanggal" required>
@@ -229,26 +251,28 @@ $conn->close();
 
 
         <label for="bank">Bank/Cash:</label>
-        <select id="bank" name="bank" required>
-            <option value="" disabled selected hidden>Pilih Bank/Cash</option>
-            <?php
-         $conn = new mysqli($servername, $db_username, $db_password, $database);
+        <?php if ($is_sales): ?>
+            <input type="text" id="bank" name="bank" value="CASH" readonly style="background-color: #eee;">
+        <?php else: ?>
+            <select id="bank" name="bank" required>
+                <option value="" disabled selected hidden>Pilih Bank/Cash</option>
+                <option value="CASH">CASH</option>
+                <?php
+                $conn = new mysqli($servername, $db_username, $db_password, $database);
+                $sql = "SELECT id_bank AS id, n_bank AS bank FROM bank";
+                $result = $conn->query($sql);
 
-$sql = "SELECT id, bank FROM bank WHERE cabang = 'HO1'";
-$result = $conn->query($sql);
-
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        echo "<option value='" . $row['bank'] . "'>" . htmlspecialchars($row['bank']) . "</option>";
-    }
-} else {
-    echo "<option value=''>Tidak ada data bank tersedia</option>";
-}
-
-$conn->close();
-
-            ?>
-        </select>
+                if ($result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        echo "<option value='" . $row['bank'] . "'>" . htmlspecialchars($row['bank']) . "</option>";
+                    }
+                } else {
+                    echo "<option value=''>Tidak ada data bank tersedia</option>";
+                }
+                $conn->close();
+                ?>
+            </select>
+        <?php endif; ?>
    <input type="hidden" name="userbayar" value="<?php echo htmlspecialchars($userbayar_input); ?>">
    <label for="uang">Uang Pembayaran:</label>
 <input type="number" id="uang" name="uang" step="0.01" 

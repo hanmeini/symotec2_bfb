@@ -44,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Simpan ke transaksiHO1 (mengikuti ledger ATK HO)
         $stmtTransaksi = $conn->prepare("INSERT INTO transaksiHO1 (tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k, user, sj, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
+        $total_hpp = 0;
+
         foreach ($kode_b as $i => $kode) {
             if (empty($kode)) continue;
             $qty = (float)($jumlah_k[$i] ?? 0);
@@ -77,11 +79,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtTransaksi->bind_param("sssssddddssi", $tanggal, $nomor, $cust, $kode, $nama, $qty, $hrg, $pjk, $tot, $userin, $nomor, $id_gudang);
             $stmtTransaksi->execute();
             
+            // Calculate HPP
+            $stmt_hpp = $conn->prepare("SELECT harga_m FROM b WHERE kode_b = ? LIMIT 1");
+            $stmt_hpp->bind_param("s", $kode);
+            $stmt_hpp->execute();
+            $res_hpp = $stmt_hpp->get_result();
+            if($row_hpp = $res_hpp->fetch_assoc()){
+                $total_hpp += ($qty * (float)$row_hpp['harga_m']);
+            }
+            $stmt_hpp->close();
+            
             // Recalculate stock history for this item
             recalculate_stock_history($conn, $kode);
         }
         $stmtStock->close();
         $stmtTransaksi->close();
+        
+        // ===================================
+        // JURNAL A: PENGAKUAN PENJUALAN
+        // ===================================
+        $ket_jurnal = "Penjualan POS " . $nomor;
+        
+        $stmt_jurnal = $conn->prepare("INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit, kode_booking) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+        // 1. Debet: 11201 Piutang Dagang
+        $d = $total_harga; $k = 0;
+        $coa = '11201';
+        $stmt_jurnal->bind_param("ssssdds", $nomor, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor);
+        $stmt_jurnal->execute();
+
+        // 2. Kredit: 41101 Penjualan
+        $d = 0; $k = $dpp;
+        $coa = '41101';
+        $stmt_jurnal->bind_param("ssssdds", $nomor, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor);
+        $stmt_jurnal->execute();
+
+        // 3. Kredit: 21201 PPN Keluaran
+        if ($ppn > 0) {
+            $d = 0; $k = $ppn;
+            $coa = '21201';
+            $stmt_jurnal->bind_param("ssssdds", $nomor, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor);
+            $stmt_jurnal->execute();
+        }
+
+        // 4. Debet: 51101 HPP & Kredit: 11301 Persediaan
+        if ($total_hpp > 0) {
+            $d = $total_hpp; $k = 0;
+            $coa = '51101';
+            $stmt_jurnal->bind_param("ssssdds", $nomor, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor);
+            $stmt_jurnal->execute();
+
+            $d = 0; $k = $total_hpp;
+            $coa = '11301';
+            $stmt_jurnal->bind_param("ssssdds", $nomor, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor);
+            $stmt_jurnal->execute();
+        }
+        $stmt_jurnal->close();
         
         $conn->commit();
         echo "<script>

@@ -11,34 +11,18 @@ session_start([
 
 
 
-$allowed_referer_domain = "https://symotech.id/";
-
-// Periksa apakah HTTP_REFERER ada dan berasal dari domain yang diizinkan
-if (!isset($_SERVER['HTTP_REFERER']) || strpos($_SERVER['HTTP_REFERER'], $allowed_referer_domain) !== 0) {
-    header("Location: https://symotech.id");
-    exit();
-}
-
-
 // Periksa apakah pengguna sudah login
 if (!isset($_SESSION['userid'])) {
     // Jika belum login, redirect ke halaman login
     header("Location: index.html");
     exit();
 }
-
-// Periksa apakah session location adalah 'HO' atau 'HO1'
-if ($_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
-    // Jika lokasi bukan 'HO' atau 'HO1', redirect ke halaman login
-    header("Location: index.html");
-    exit();
-}
-require_once 'config.php';
+require_once 'config1.php';
 
 // Konfigurasi koneksi database
 $servername = getenv('DB_HOST') ?: die("Kesalahan: DB_HOST tidak ditemukan.");
 $db_username = getenv('DB_USER') ?: die("Kesalahan: DB_USER tidak ditemukan.");
-$db_password = getenv('DB_PASS') ?: die("Kesalahan: DB_PASS tidak ditemukan.");
+$db_password = getenv('DB_PASS');
 $database = getenv('DB_NAME') ?: die("Kesalahan: DB_NAME tidak ditemukan.");
 
 $conn = new mysqli($servername, $db_username, $db_password, $database);
@@ -311,24 +295,13 @@ function openPopup(url) {
     </a>
 
     </div>
-    
-<button onclick="openPopup('pelunasan.php?J=<?= urlencode($J) ?>')" title="Lihat Nota">
-    Pembayaran
-</button>
-<button onclick="openPopup('sjs.php?J=<?= urlencode($j_value) ?>')" title="Lihat SJ Sederhana">
-    Surat Jalan
-</button>
-
-<br><br>
-
-<button onclick="window.print();">Print Nota</button>
-    
+    <button onclick="window.print();" style="font-size: 14px; padding: 10px 20px; background-color: #2196F3;"><i class="fas fa-print"></i> Print Nota</button>
 </div>
 <div class="container">
-          <h1><img src="mine7.png" alt="Logo" style="max-width: 250px; height: auto;"></h1>
+          <h1><img src="logo.png" alt="Logo" style="max-width: 250px; height: auto;"></h1>
 
-    <h2>Perum Jatisari Indah
-        Blok A1 No 9 <br>Jatisari, Mijen (Bunderan Sisi Utara)</h2>
+    <h2>Jl. Anggrek no 9,
+        <br>Panjang Kidul, Ambarawa.</h2>
  <h2>
     <i class="fa-brands fa-whatsapp"></i> 081556622215
   </h2> <br>
@@ -346,7 +319,7 @@ function openPopup(url) {
                         $harga_k = $data['harga_k'];
                         $ppn_k = $data['ppn_k'];
                         $hargat_k = $data['hargat_k'];
-  $hu = $hargat_k / $jumlah_k;
+                        $hu = $jumlah_k > 0 ? $hargat_k / $jumlah_k : 0;
                         $total = $harga_k + $ppn_k;
 
                         echo "<div style='line-height: 2;'>"
@@ -361,26 +334,27 @@ function openPopup(url) {
                 </tr>
             <?php endforeach; ?>
         </table>
+    <?php else: ?>
+        <p style="text-align:center; color: red;">(Rincian item tidak tersedia)</p>
+    <?php endif; ?>
+    
         <hr>
         <div class="total">
-            <h3>Total: <?php echo number_format($penjualan_data['jumlah'], 2); ?></h3>
-        <p>dibayar: <?php echo number_format($uang, 0, ',', '.'); ?></p>
-<p>kembalian: <?php echo number_format($kembalian, 0, ',', '.'); ?></p>
-                
+            <h3>Total: <?php echo isset($penjualan_data['jumlah']) ? number_format($penjualan_data['jumlah'], 0) : '0'; ?></h3>
+            <p>dibayar: <?php echo isset($penjualan_data['uang']) ? number_format($penjualan_data['uang'], 0, ',', '.') : '0'; ?></p>
+            <p>kembalian: <?php echo isset($penjualan_data['kembalian']) ? number_format($penjualan_data['kembalian'], 0, ',', '.') : '0'; ?></p>
         </div>
         
         <hr>
         <p>Nomor: <?php echo htmlspecialchars($J); ?></p>
-             <p>kasir: <?php echo htmlspecialchars($userbayar); ?></p>
-        <p>pembeli: <?php echo htmlspecialchars($cust); ?></p>
-        <p>Tanggal: <?php echo htmlspecialchars($tanggal_transaksi); ?></p>
-             <h4>Barang yang sudah dibeli tidak bisa dikembalikan</h4>
+        <p>kasir: <?php echo htmlspecialchars($penjualan_data['userbayar'] ?? '-'); ?></p>
+        <p>pembeli: <?php echo htmlspecialchars($penjualan_data['cust'] ?? '-'); ?></p>
+        <p>Tanggal: <?php echo isset($tanggal_transaksi) ? htmlspecialchars($tanggal_transaksi) : date('Y-m-d'); ?></p>
+        
+        <h4>Barang yang sudah dibeli tidak bisa dikembalikan</h4>
         <h4>Menerima pemesanan buket dan pembungkusan kado</h4>
         <h4>Terimakasih telah berbelanja di toko kami</h4>
-      <h4>"Jazakumullah Khoir"</h4>
-    <?php else: ?>
-        <p style="text-align:center; color: red;">Tidak ada data transaksi.</p>
-    <?php endif; ?>
+        <h4>"Jazakumullah Khoir"</h4>
 
 
 <br>

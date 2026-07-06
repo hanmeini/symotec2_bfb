@@ -175,7 +175,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['submit_sj'])){
                 $inStatus="IN";
 
                 $stmtOut->bind_param(
-                    "ssdsis",
+                    "ssdssi",
                     $J_out,
                     $kode,
                     $qty,
@@ -189,7 +189,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['submit_sj'])){
                 }
 
                 $stmtIn->bind_param(
-                    "ssdsis",
+                    "ssdssi",
                     $J_in,
                     $kode,
                     $qty,
@@ -248,7 +248,8 @@ $c->close();
 /* ================= LOAD BARANG ================= */
 
 $barangList=[];
-$idGudangAsal=$_POST['id_gudang_asal'] ?? '';
+$url_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$idGudangAsal=$_POST['id_gudang_asal'] ?? ($url_id > 0 ? $url_id : '');
 
 if($idGudangAsal){
 
@@ -357,26 +358,27 @@ border-radius:5px;
 <?php if(!empty($successMsg)) echo '<div class="msg success">'.e($successMsg).'</div>'; ?>
 <?php if(!empty($errorMsg)) echo '<div class="msg error">'.e($errorMsg).'</div>'; ?>
 
-<form method="POST">
+<form method="POST" action="?id=<?= $url_id > 0 ? $url_id : '' ?>">
 
 <label>Gudang Asal</label>
 
-<select name="id_gudang_asal" onchange="this.form.submit()" required>
-
-<option value="">-- pilih gudang --</option>
-
-<?php foreach($gudang_options as $g): ?>
-
-<option value="<?=e($g['id_gudang'])?>"
-<?=($idGudangAsal==$g['id_gudang']?'selected':'')?>>
-
-<?=e($g['nama_gudang'])?>
-
-</option>
-
-<?php endforeach; ?>
-
-</select>
+<?php if ($url_id > 0): ?>
+    <?php foreach($gudang_options as $g): ?>
+        <?php if ($g['id_gudang'] == $url_id): ?>
+            <input type="text" value="<?=e($g['nama_gudang'])?>" readonly style="background-color: #e9ecef;">
+            <input type="hidden" name="id_gudang_asal" value="<?=e($g['id_gudang'])?>">
+        <?php endif; ?>
+    <?php endforeach; ?>
+<?php else: ?>
+    <select name="id_gudang_asal" onchange="this.form.submit()" required>
+        <option value="">-- pilih gudang --</option>
+        <?php foreach($gudang_options as $g): ?>
+            <option value="<?=e($g['id_gudang'])?>" <?=($idGudangAsal==$g['id_gudang']?'selected':'')?>>
+                <?=e($g['nama_gudang'])?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+<?php endif; ?>
 
 
 <label>Gudang Tujuan</label>

@@ -12,14 +12,15 @@ if(isset($_POST['simpan'])){
     $gudang = $_POST['id_gudang'];
     $hp     = $_POST['no_hp'];
     $alamat = $_POST['alamat'];
+    $coa_kas = $_POST['coa_kas'];
 
     $stmt=$conn->prepare("
         INSERT INTO master_sales
-        (userid,kode_sales,id_gudang,no_hp,alamat)
-        VALUES (?,?,?,?,?)
+        (userid,kode_sales,id_gudang,no_hp,alamat,coa_kas)
+        VALUES (?,?,?,?,?,?)
     ");
 
-    $stmt->bind_param("isiss",$userid,$kode,$gudang,$hp,$alamat);
+    $stmt->bind_param("isisss",$userid,$kode,$gudang,$hp,$alamat,$coa_kas);
 
     if($stmt->execute()){
         $msg="✅ Data sales berhasil disimpan";
@@ -52,6 +53,15 @@ $user = $conn->query("
 $gudang = $conn->query("
     SELECT * FROM master_gudang
     ORDER BY nama_gudang
+");
+
+/* =========================
+   DATA COA KAS
+=========================*/
+$coakas = $conn->query("
+    SELECT account_code, account_name FROM coa 
+    WHERE account_code LIKE '111%'
+    ORDER BY account_code
 ");
 
 /* =========================
@@ -172,6 +182,16 @@ th{
 <label>No HP</label>
 <input type="text" name="no_hp">
 
+<label>COA Kas Sales</label>
+<select name="coa_kas" required>
+<option value="">-- Pilih COA Kas --</option>
+<?php while($c=$coakas->fetch_assoc()){ ?>
+<option value="<?= $c['account_code']; ?>">
+<?= $c['account_code']; ?> - <?= $c['account_name']; ?>
+</option>
+<?php } ?>
+</select>
+
 <label>Alamat</label>
 <textarea name="alamat"></textarea>
 
@@ -190,6 +210,7 @@ th{
 <th>Nama Sales</th>
 <th>Gudang</th>
 <th>No HP</th>
+<th>COA Kas</th>
 <th>Alamat</th>
 <th>Aksi</th>
 </tr>
@@ -201,6 +222,7 @@ th{
 <td><?= $row['username']; ?></td>
 <td><?= $row['nama_gudang']; ?></td>
 <td><?= $row['no_hp']; ?></td>
+<td><?= $row['coa_kas']; ?></td>
 <td><?= $row['alamat']; ?></td>
 <td>
 <a class="hapus"

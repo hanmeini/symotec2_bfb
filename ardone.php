@@ -1,5 +1,4 @@
 <?php
-
 session_start([
     'cookie_lifetime' => 86400,
     'cookie_httponly' => true,
@@ -8,23 +7,17 @@ session_start([
     'use_strict_mode' => true,
 ]);
 
-
-
-
-
-if (!isset($_SESSION['username'])) {
+if (!isset($_SESSION['userid'])) {
     header("Location: index.html");
     exit();
 }
 
 require_once 'config1.php';
 
-
-
-
-
-if ($conn->connect_error) {
-    die("Koneksi ke database kedua gagal: " . $conn->connect_error);
+// Proteksi: Hanya HO atau Owner yang boleh mengakses AR ini
+if (isset($_SESSION['location']) && $_SESSION['location'] !== 'HO' && $_SESSION['bagian'] !== 'owner') {
+    echo "<script>alert('Akses Ditolak: Halaman ini hanya untuk bagian Head Office (HO).'); window.location.href='home.php';</script>";
+    exit();
 }
 
 $filter = isset($_GET['filter']) ? trim($_GET['filter']) : '';
@@ -32,67 +25,24 @@ $filter_sql = '';
 
 if ($filter !== '') {
     $escaped_filter = $conn->real_escape_string($filter);
-    $escaped_filter2 = $conn->real_escape_string($filter);
-
-    $customer_ids = [];
-    $customer_query = $conn->query("SELECT id FROM customer WHERE customer LIKE '%$escaped_filter2%'");
-    while ($cust = $customer_query->fetch_assoc()) {
-        $customer_ids[] = intval($cust['id']);
-    }
-    $id_list = implode(",", $customer_ids);
-    $filter_sql = "AND (
-        kodebooking LIKE '%$escaped_filter%' 
-        OR inv LIKE '%$escaped_filter%' 
-        " . (!empty($id_list) ? " OR cust_id IN ($id_list)" : "") . "
+    $filter_sql .= " AND (
+        p.J LIKE '%$escaped_filter%'
+        OR p.cust LIKE '%$escaped_filter%'
+        OR p.userinv LIKE '%$escaped_filter%'
     )";
 }
 
-$sql_pph23 = "
-    SELECT 
-        pph23.id,
-        pph23.tanggal,
-        pph23.inv,
-        pph23.kodebooking,
-        pph23.cust_id,
-        pph23.bukpot,
-        pph23.pph23,
-        pph23.tagihan,
-        pph23.fp,
-        pph23.bayar,
-        pph23.sisa,
-        pph23.location,
-        pph23.devisi,
-        DATEDIFF(CURDATE(), pph23.tanggal) AS umur,
-        -- Subquery untuk PPN
-        (
-            SELECT SUM(j.kredit)
-            FROM jurnal j
-            WHERE j.journal_number = pph23.inv
-              AND j.coa = '21206'
-        ) AS PPN,
-        -- Subquery untuk DPP
-        (
-            SELECT SUM(j.kredit)
-            FROM jurnal j
-            WHERE j.journal_number = pph23.inv
-              AND j.coa LIKE '41%'
-        ) AS DPP
-    FROM 
-        pph23
-    WHERE 
-        pph23.bayar > 0
-        $filter_sql
-    ORDER BY umur DESC
-";
+// Mengambil data penjualan kredit yang SUDAH dibayar (bayar > 0) DARI penjualanHO1
+$sql = "SELECT 
+            p.tanggal_transaksi, p.J, p.cust, p.jumlah, p.bayar, p.sisa, p.userinv,
+            DATEDIFF(CURDATE(), p.tanggal_transaksi) AS umur
+        FROM penjualanHO1 p 
+        WHERE p.bayar > 0 $filter_sql
+        ORDER BY p.tanggal_transaksi DESC";
+$result = $conn->query($sql);
 
-$result_pph23 = $conn->query($sql_pph23);
-
-// Handling Export to PDF or Excel
-if (isset($_GET['export']) && $_GET['export'] == 'pdf') {
-    require_once 'export_pdfar.php';
-    exit();
-} elseif (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    require_once 'export_excelardone.php';
+if (isset($_GET['export']) && $_GET['export'] == 'excel') {
+    echo "<script>alert('Fitur Export Excel akan segera disiapkan.'); window.history.back();</script>";
     exit();
 }
 ?>
@@ -100,346 +50,102 @@ if (isset($_GET['export']) && $_GET['export'] == 'pdf') {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Customer Belum Bayar</title>
+    <title>Customer Sudah Bayar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-       body {
-    font-family: Arial, sans-serif;
-    background-color: #f2f2f2;
-    margin: 0;
-    padding: 20px;
-}
-
-.table-container {
-    background: #fff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    max-height: 800px;
-    overflow-y: auto;
-}
-
-h1 {
-    text-align: center;
-}
-
-form {
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-input[type="text"] {
-    padding: 8px;
-    width: 300px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-}
-
-button {
-    padding: 8px 16px;
-    border: none;
-    background-color: #4CAF50;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-button[type="submit"] {
-    padding: 8px 14px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-button[type="submit"]:hover {
-    background-color: #45a049;
-}
-
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 20px;
-}
-
-th, td {
-    text-align: right;
-    padding: 10px;
-    border: 1px solid #ddd;
-    font-size: 14px;
-}
-
-/* ✅ Tambahkan ini untuk sticky header */
-th {
-   background-color: blue;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-      color: white;
-}
-
-tr:hover {
-    background-color: #f1f1f1;
-}
-
-.action-icon button {
-    margin: 2px;
-    padding: 5px 10px;
-    background: #007BFF;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.action-icon button:hover {
-    background-color: #0056b3;
-}
-
-.home-icon i {
-    color: maroon;
-    font-size: 36px;
-    float: left;
-}
-
-.left-icon i {
-    color: maroon;
-    font-size: 36px;
-    float: right;
-}
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #e0f2f1; margin: 0; padding: 20px; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn { padding: 8px 15px; background: #00897b; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; display: inline-block;}
+        .btn:hover { background: #00695c; }
+        
+        .search-box { margin-bottom: 20px; text-align: center; }
+        .search-box input[type="text"] { padding: 8px; width: 400px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;}
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px;}
+        th, td { border: 1px solid #b2dfdb; padding: 10px; text-align: left; }
+        th { background: #00695c; color: white; text-align: center; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .bg-light-green { background-color: #dff0d8; font-weight: bold; }
+        tr:hover { background-color: #f5f5f5; }
     </style>
 </head>
 <body>
 
-    <a href="home.php" class="home-icon"><i class="fas fa-home"></i></a>
-    <a href="ar.php" class="left-icon"><i class="fa-solid fa-circle-left"></i></a>
-    <h1>Customer Sudah Bayar</h1>
+<div class="card">
+    <div class="header">
+        <h2 style="color: #004d40;"><i class="fa-solid fa-file-invoice-dollar"></i> Customer Sudah Bayar</h2>
+        <div>
+            <a href="ar.php" class="btn" style="background:#dc3545; margin-left:10px;"><i class="fa fa-arrow-left"></i> Kembali ke AR</a>
+        </div>
+    </div>
+    
+    <div class="search-box">
+        <form method="GET">
+            <input type="text" name="filter" placeholder="Cari No. Invoice / Customer / Sales..." value="<?= htmlspecialchars($filter ?? '') ?>">
+            <button type="submit" class="btn"><i class="fa fa-search"></i> Cari</button>
+            <button type="submit" name="export" value="excel" class="btn" style="background: #2e7d32;"><i class="fa fa-file-excel"></i> Export Excel</button>
+        </form>
+    </div>
 
-    <!-- Export Buttons -->
-    <form method="GET">
-        <input type="text" name="filter" placeholder="Cari invoice / kode booking / customer" value="<?= htmlspecialchars($filter ?? '') ?>">
-        <button type="submit">Cari</button>
-        <button type="submit" name="export" value="excel">
-    <i class="fas fa-file-excel"></i> Export to Excel
-</button>
- 
-      
-    </form>
+    <div style="overflow-x: auto; max-height: 500px; overflow-y: auto;">
+        <table>
+            <thead style="position: sticky; top: 0; z-index: 2;">
+                <tr>
+                    <th width="3%">No</th>
+                    <th width="10%">Sales</th>
+                    <th width="12%">Tanggal</th>
+                    <th width="12%">No. Invoice</th>
+                    <th width="15%">Customer</th>
+                    <th width="10%" class="text-right">Tagihan</th>
+                    <th width="10%" class="text-right">Total Bayar</th>
+                    <th width="10%" class="text-right">Sisa Piutang</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($result && $result->num_rows > 0) {
+                    $no = 1;
+                    $total_tagihan = 0;
+                    $total_bayar = 0;
+                    $total_sisa = 0;
 
-   <?php
-if ($result_pph23->num_rows > 0) {
-    $total_pph23 = 0;
-    $total_bayar = 0;
-    $total_tagihan = 0;
-    $total_sisa = 0;
+                    while ($row = $result->fetch_assoc()) {
+                        $tagihan = floatval($row['jumlah']);
+                        $bayar = floatval($row['bayar']);
+                        $sisa = floatval($row['sisa']);
 
-    echo "<table border='1' cellpadding='5' cellspacing='0' width='100%'>
-        <tr style='background-color:#f2f2f2; font-weight:bold;'>
-          
-            <th>ID</th>
-            <th>Tanggal</th>
-            <th>Invoice</th>
-            <th>Kode Booking</th>
-            <th>Customer</th>
-               <th>Transaksi</th>
-                <th>ppn</th>
-                        <th> - PPH23</th>
-                          <th> - Titipan awal</th>
-            <th>Tagihan</th>
-            <th>USD</th>
-      
-            <th>Bayar</th>
-            <th>Sisa</th>
-            <th>Loc Dev</th>
-     
-            <th>Pembayaran</th>
-        </tr>";
+                        $total_tagihan += $tagihan;
+                        $total_bayar += $bayar;
+                        $total_sisa += $sisa;
 
-    while ($row = $result_pph23->fetch_assoc()) {
-        // Get customer name
-        $customer_name = 'Tidak Ditemukan';
-        $sql_customer = "SELECT customer FROM customer WHERE id = " . intval($row['cust_id']);
-        $result_customer = $conn->query($sql_customer);
-        if ($result_customer && $result_customer->num_rows > 0) {
-            $customer_name = $result_customer->fetch_assoc()['customer'];
-        }
+                        echo "<tr>";
+                        echo "<td class='text-center'>" . $no++ . "</td>";
+                        echo "<td>" . htmlspecialchars($row['userinv']) . "</td>";
+                        echo "<td>" . date('d-M-Y H:i', strtotime($row['tanggal_transaksi'])) . "</td>";
+                        echo "<td><strong>" . htmlspecialchars($row['J']) . "</strong></td>";
+                        echo "<td>" . htmlspecialchars($row['cust']) . "</td>";
+                        echo "<td class='text-right'>" . number_format($tagihan, 0, ',', '.') . "</td>";
+                        echo "<td class='text-right' style='color:green; font-weight:bold;'>" . number_format($bayar, 0, ',', '.') . "</td>";
+                        echo "<td class='text-right' style='color:red;'>" . number_format($sisa, 0, ',', '.') . "</td>";
+                        echo "</tr>";
+                    }
 
-$ttp_value = max(0, floatval($row['DPP']) + floatval($row['PPN']) - floatval($row['pph23']) - floatval($row['tagihan']));
-
-
-$total_DPP += floatval($row['DPP']);
-             $total_PPN += floatval($row['PPN']);
-                   $total_ttp += floatval($ttp_value);
-        $total_tagihan += floatval($row['tagihan']);
-        $total_bayar += floatval($row['bayar']);
-        $total_sisa += floatval($row['sisa']);
-           $total_pph += floatval($row['pph23']);
-             $total_usd += floatval($usd_value);
-
-        // Get USD value
-        $usd_value = '-';
-        $kodebooking = $conn->real_escape_string($row['kodebooking']);
-        $query_crus = $conn->query("SELECT curs_sell FROM booking_request WHERE kode_booking = '$kodebooking' LIMIT 1");
-
-        if ($query_crus && $query_crus->num_rows > 0) {
-            $curs = $query_crus->fetch_assoc();
-            $curs_sell = isset($curs['curs_sell']) && !is_null($curs['curs_sell']) ? floatval($curs['curs_sell']) : 0;
-
-            if ($curs_sell > 0) {
-                $usd_value = number_format($row['tagihan'] / $curs_sell, 2);
-            } else {
-                $usd_value = number_format(0, 2);
-            }
-        } else {
-            $usd_value = number_format(0, 2);
-        }
-
-        echo "<tr>
-       
-            <td>" . htmlspecialchars($row['id'] ?? '') . "</td>
-            <td>" . htmlspecialchars($row['tanggal'] ?? '') . "</td>
-            <td>" . htmlspecialchars($row['inv'] ?? '') . "</td>
-            <td>" . htmlspecialchars($row['kodebooking'] ?? '') . "</td>
-            <td>" . htmlspecialchars($customer_name ?? '') . "</td>
-              <td>" . number_format($row['DPP'], 2) . "</td>
-                    <td>" . number_format($row['PPN'], 2) . "</td>
-                    <td style='color: #cc0000;'>" . number_format($row['pph23'], 2) . "</td>
-      <td style='color: #cc0000;'>" . number_format ($ttp_value, 2) . "</td>
-
-            <td>" . number_format($row['tagihan'], 2) . "</td>
-            <td> " . $usd_value . "</td>
- 
-            <td>" . number_format($row['bayar'], 2) . "</td>
-            <td>" . number_format($row['sisa'], 2) . "</td>
-            <td>" . htmlspecialchars($row['location'] . " - " . $row['devisi'] ?? '') . "</td>
-      
-            <td class='action-icon'>
-               <button type='button' onclick='openPopup(\"ardetail.php?J=" . urlencode($row['inv']) . 
-        "&tagihan=" . urlencode($row['tagihan']) . 
-        "&ttp=" . urlencode($ttp_value) . 
-        "&pph23=" . urlencode($row['pph23']) . "\")'>detail</button>
-
-       
-            </td>
-        </tr>";
-    }
-
-     echo "<tr style='font-weight: bold; background-color: #dff0d8'>
-        <td colspan='5' style='text-align:center'>Total</td>
-                 <td>" . number_format($total_DPP, 2) . "</td>
-                          <td>" . number_format($total_PPN, 2) . "</td>
-                               <td>" . number_format($total_pph, 2) . "</td>
-                                    <td>" . number_format($total_ttp, 2) . "</td>
-   
-        <td>" . number_format($total_tagihan, 2) . "</td>
-           <td>" . number_format($total_usd, 2) . "</td>
-          
-        <td>" . number_format($total_bayar, 2) . "</td>
-        <td>" . number_format($total_sisa, 2) . "</td>
-        <td colspan='3'></td> <!-- Kosong untuk lokasi/dev/umur/aksi -->
-    </tr>
-    </table>";
-
-  
-
-} else {
-    echo "<p>Tidak ada data invoice.</p>";
-}
-
-$conn->close();
-?>
-
-    <!-- Form tersembunyi untuk pengiriman POST -->
-    <form id="bulkActionForm" method="POST" target="_blank"></form>
+                    echo "<tr class='bg-light-green'>";
+                    echo "<td colspan='5' class='text-center'>TOTAL KESELURUHAN</td>";
+                    echo "<td class='text-right'>" . number_format($total_tagihan, 0, ',', '.') . "</td>";
+                    echo "<td class='text-right'>" . number_format($total_bayar, 0, ',', '.') . "</td>";
+                    echo "<td class='text-right'>" . number_format($total_sisa, 0, ',', '.') . "</td>";
+                    echo "</tr>";
+                } else {
+                    echo "<tr><td colspan='8' class='text-center'>Tidak ada data.</td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
 </div>
-
-<!-- Script -->
-<script>
-document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('keydown', e => {
-    if (
-        e.keyCode == 123 ||
-        (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) ||
-        (e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) ||
-        (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))
-    ) e.preventDefault();
-});
-
-function openPopup(url) {
-    const width = 800, height = 900;
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
-    window.open(url, 'PopupWindow', `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`);
-}
-
-document.getElementById('select-all').addEventListener('change', function () {
-    const checkboxes = document.querySelectorAll('input[name="selected_ids[]"]');
-    for (const checkbox of checkboxes) {
-        checkbox.checked = this.checked;
-    }
-});
-
-function processSelected(action) {
-    const selectedCheckboxes = document.querySelectorAll('input[name="selected_ids[]"]:checked');
-
-    if (selectedCheckboxes.length === 0) {
-        alert("Pilih minimal satu data terlebih dahulu.");
-        return;
-    }
-
-    let firstCustomer = null;
-    let firstDevisi = null;
-    let isValid = true;
-
-    selectedCheckboxes.forEach(cb => {
-        const row = cb.closest("tr");
-        const customer = row.querySelector("td:nth-child(6)").textContent.trim();
-        const devisiText = row.querySelector("td:nth-child(12)").textContent.trim();
-        const devisi = devisiText.includes(' - ') ? devisiText.split(" - ")[1].trim() : devisiText;
-
-        if (firstCustomer === null && firstDevisi === null) {
-            firstCustomer = customer;
-            firstDevisi = devisi;
-        } else {
-            if (customer !== firstCustomer || devisi !== firstDevisi) {
-                isValid = false;
-            }
-        }
-    });
-
-    if (!isValid) {
-        alert("Semua baris yang dipilih harus memiliki Customer dan Devisi yang sama.");
-        return;
-    }
-
-    const form = document.getElementById("bulkActionForm");
-    form.innerHTML = ""; // Kosongkan isi form
-    let actionUrl = "";
-
-    if (action === "cash") {
-        actionUrl = `ardetail.php`;
-    } else if (action === "bank") {
-        actionUrl = `arb${firstDevisi}.php`;
-    } else if (action === "titipan") {
-        actionUrl = `art${firstDevisi}.php`;
-    }
-
-    form.action = actionUrl;
-
-    selectedCheckboxes.forEach(cb => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "selected_ids[]";
-        input.value = cb.value;
-        form.appendChild(input);
-    });
-
-    form.submit();
-}
-</script>
-
-
 
 </body>
 </html>

@@ -1,11 +1,5 @@
 <?php
-session_start([
-    'cookie_lifetime' => 86400,
-    'cookie_httponly' => true,
-    'cookie_secure' => isset($_SERVER['HTTPS']),
-    'use_only_cookies' => true,
-    'use_strict_mode' => true,
-]);
+session_start();
 
 if (!isset($_SESSION['userid'])) {
     header("Location: index.html");
@@ -14,10 +8,28 @@ if (!isset($_SESSION['userid'])) {
 
 require_once 'config1.php';
 
-// Proteksi: Hanya HO atau Owner yang boleh mengakses AR ini
-if (isset($_SESSION['location']) && $_SESSION['location'] !== 'HO' && $_SESSION['bagian'] !== 'owner') {
-    echo "<script>alert('Akses Ditolak: Halaman ini hanya untuk bagian Head Office (HO).'); window.location.href='home.php';</script>";
-    exit();
+// Konfigurasi koneksi database
+$servername = getenv('DB_HOST') ?: die("Kesalahan: DB_HOST tidak ditemukan.");
+$db_username = getenv('DB_USER') ?: die("Kesalahan: DB_USER tidak ditemukan.");
+$db_password = getenv('DB_PASS'); 
+$database = getenv('DB_NAME') ?: die("Kesalahan: DB_NAME tidak ditemukan.");
+
+$conn = new mysqli($servername, $db_username, $db_password, $database);
+if ($conn->connect_error) {
+    die("Koneksi gagal: " . $conn->connect_error);
+}
+
+$id_gudang = $_GET['id_gudang'] ?? '';
+
+// Menentukan apakah user adalah sales
+$is_sales = false;
+if (isset($_SESSION['location']) && $_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
+    $is_sales = true;
+}
+
+$sales_filter = "";
+if ($is_sales) {
+    $sales_filter = " AND p.userinv = '" . $conn->real_escape_string($_SESSION['username']) . "'";
 }
 
 $filter = isset($_GET['filter']) ? trim($_GET['filter']) : '';
@@ -32,12 +44,12 @@ if ($filter !== '') {
     )";
 }
 
-// Mengambil data penjualan kredit yang belum lunas (sisa > 0) DARI penjualanHO1
+// Mengambil data penjualan kredit yang belum lunas (sisa > 0)
 $sql = "SELECT 
             p.tanggal_transaksi, p.J, p.cust, p.jumlah, p.bayar, p.sisa, p.userinv,
             DATEDIFF(CURDATE(), p.tanggal_transaksi) AS umur
         FROM penjualanHO1 p 
-        WHERE p.sisa > 0 $filter_sql
+        WHERE p.sisa > 0 $sales_filter $filter_sql
         ORDER BY p.tanggal_transaksi DESC";
 $result = $conn->query($sql);
 
@@ -50,7 +62,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>AR Global (Semua Sales)</title>
+    <title>AP Sales (Piutang Kredit)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #e0f2f1; margin: 0; padding: 20px; }
@@ -60,7 +72,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
         .btn:hover { background: #00695c; }
         .btn-warning { background: #ffb300; color: black; font-weight: bold; }
         .btn-warning:hover { background: #ffa000; }
-        .btn-primary { background: blue; color: white; font-weight: bold; }
         
         .search-box { margin-bottom: 20px; text-align: center; }
         .search-box input[type="text"] { padding: 8px; width: 400px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;}
@@ -78,12 +89,9 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
 
 <div class="card">
     <div class="header">
-        <h2 style="color: #004d40;"><i class="fa-solid fa-file-invoice-dollar"></i> AR Global (Semua Sales)</h2>
+        <h2 style="color: #004d40;"><i class="fa-solid fa-file-invoice-dollar"></i> Laporan AP Sales (Piutang Penjualan Kredit)</h2>
         <div>
-            <button type="button" onclick="window.location.href='arsales.php'" class="btn" style="background:#17a2b8;">Persales Lama</button>
-            <button type="button" onclick="window.location.href='ardone.php'" class="btn" style="background:#28a745;">Sudah Bayar Lama</button>
-            <button type="button" onclick="window.location.href='ar_ledger.php'" class="btn btn-primary">AR dr Piutang Dagang</button>
-            <a href="home.php" class="btn" style="background:#dc3545; margin-left:10px;"><i class="fa fa-arrow-left"></i> Kembali</a>
+            <a href="gudang/home.php?id=<?= htmlspecialchars($id_gudang) ?>" class="btn"><i class="fa fa-arrow-left"></i> Kembali</a>
         </div>
     </div>
     
@@ -91,42 +99,47 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
         <form method="GET">
             <input type="text" name="filter" placeholder="Cari No. Invoice / Customer / Sales..." value="<?= htmlspecialchars($filter ?? '') ?>">
             <button type="submit" class="btn"><i class="fa fa-search"></i> Cari</button>
-            <button type="submit" name="export" value="excel" class="btn" style="background: #2e7d32;"><i class="fa fa-file-excel"></i> Export Excel</button>
+            <button type="submit" name="export" value="excel" class="btn" style="background:#207245;"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
         </form>
     </div>
 
-    <div style="overflow-x: auto; max-height: 500px; overflow-y: auto;">
+    <div style="overflow-x: auto;">
         <table>
-            <thead style="position: sticky; top: 0; z-index: 2;">
+            <thead>
                 <tr>
-                    <th width="3%">No</th>
-                    <th width="10%">Sales</th>
-                    <th width="12%">Tanggal</th>
-                    <th width="12%">No. Invoice</th>
-                    <th width="15%">Customer</th>
-                    <th width="10%" class="text-right">Sisa Piutang</th>
-                    <th width="9%" class="text-right">1-30 Hari</th>
-                    <th width="9%" class="text-right">31-60 Hari</th>
-                    <th width="9%" class="text-right">61-90 Hari</th>
-                    <th width="9%" class="text-right">> 90 Hari</th>
-                    <th width="8%">Aksi</th>
+                    <th>No</th>
+                    <th>Sales</th>
+                    <th>Tanggal Transaksi</th>
+                    <th>No. Invoice (J)</th>
+                    <th>Customer</th>
+                    <th class="text-right">Sisa (Piutang)</th>
+                    <th class="text-right">1-30 Hari</th>
+                    <th class="text-right">31-60 Hari</th>
+                    <th class="text-right">61-90 Hari</th>
+                    <th class="text-right">>90 Hari</th>
+                    <th class="text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                <?php
+                <?php 
+                $data_rows = [];
                 if ($result && $result->num_rows > 0) {
-                    $no = 1;
-                    $total_sisa = 0;
-                    $total_1_30 = 0;
-                    $total_31_60 = 0;
-                    $total_61_90 = 0;
-                    $total_90_plus = 0;
-
-                    $data_rows = [];
-                    while ($row = $result->fetch_assoc()) {
+                    while($row = $result->fetch_assoc()) {
                         $data_rows[] = $row;
-                        $sisa = floatval($row['sisa']);
+                    }
+                }
+
+                $total_sisa = 0;
+                $total_1_30 = 0;
+                $total_31_60 = 0;
+                $total_61_90 = 0;
+                $total_90_plus = 0;
+
+                if (count($data_rows) > 0) {
+                    $no = 1;
+                    foreach($data_rows as $row) {
                         $umur = intval($row['umur']);
+                        $sisa = floatval($row['sisa']);
 
                         $sisa_1_30 = ($umur >= 1 && $umur <= 30) ? $sisa : 0;
                         $sisa_31_60 = ($umur >= 31 && $umur <= 60) ? $sisa : 0;
@@ -174,7 +187,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     </div>
 </div>
 
-<?php if (isset($data_rows) && count($data_rows) > 0): ?>
+<?php if (count($data_rows) > 0): ?>
 <div style="display:flex; gap: 20px; flex-wrap: wrap;">
     <!-- REKAP PER SALES -->
     <div class="card" style="flex: 1; min-width: 400px;">

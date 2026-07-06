@@ -60,6 +60,18 @@ try {
     $stmt2->execute([$id_gudang]);
     $gudangterimabelum = $stmt2->fetchColumn();
     
+    // Menghitung jumlah AP Sales yang belum lunas
+    $sql3 = "SELECT COUNT(*) FROM penjualanHO1 WHERE sisa > 0";
+    if (isset($_SESSION['location']) && $_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
+        $sql3 .= " AND userinv = ?";
+        $stmt3 = $pdo->prepare($sql3);
+        $stmt3->execute([$_SESSION['username']]);
+        $apsalesbelum = $stmt3->fetchColumn();
+    } else {
+        $stmt3 = $pdo->query($sql3);
+        $apsalesbelum = $stmt3->fetchColumn();
+    }
+    
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
 }
@@ -69,7 +81,7 @@ try {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>bfb.symotech.id</title>
+<title>mkb.symotech.id</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
@@ -206,6 +218,37 @@ gap:15px;
 
 }
 
+/* ===== BADGE OVERLAY ===== */
+.icon {
+    position: relative;
+    overflow: visible;
+}
+
+.badge-overlay {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 50;
+}
+
+.badge-overlay span {
+    padding: 3px 7px;
+    min-width: 26px;
+    text-align: center;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.badge-red {
+    background: #d9534f;  
+    color: #fff;
+}
+
 </style>
 </head>
 
@@ -213,7 +256,7 @@ gap:15px;
 
 <header>
 
-<img src="../logo.png" class="logo">
+<img src="../assets/img/logo.png" class="logo">
 
 <a href="../home.php" style="position:absolute; right:50px; top:20px; font-size:24px; color:red; text-decoration:none;">
 <i class="fa fa-home"></i>
@@ -224,7 +267,7 @@ gap:15px;
 
 <div class="container">
 
-<h1 id="animated-heading">PT BFB <?= ($id_gudang === 0) ? 'GUDANG PUSAT' : 'GUDANG ' . htmlspecialchars((string)$id_gudang) ?></h1>
+<h1 id="animated-heading">PT. BFB <?= ($id_gudang === 0) ? 'GUDANG PUSAT' : 'SALES ' . htmlspecialchars((string)$id_gudang) ?></h1>
 
 <section id="hero">
 
@@ -232,8 +275,9 @@ gap:15px;
 
 <!-- KIRIM -->
 <div class="icon">
- <p style="color: red;"><?php echo $gudangkirimbelum; ?></p>
-
+    <?php if($gudangkirimbelum > 0): ?>
+    <div class="badge-overlay"><span class="badge-red"><?= $gudangkirimbelum ?></span></div>
+    <?php endif; ?>
 <a href="../sjrekapout.php?id=<?= $id_gudang ?>" style="text-decoration:none;">
 <i class="fa-solid fa-truck"></i>
 <p>Kirim SJ Ke Gudang Lain</p>
@@ -243,7 +287,9 @@ gap:15px;
 
 <!-- TERIMA -->
 <div class="icon">
-     <p style="color: red;"><?php echo $gudangterimabelum; ?></p>
+    <?php if($gudangterimabelum > 0): ?>
+    <div class="badge-overlay"><span class="badge-red"><?= $gudangterimabelum ?></span></div>
+    <?php endif; ?>
 <a href="../antarin.php?id=<?= $id_gudang ?>" style="text-decoration:none;">
 <i class="fa-solid fa-cart-arrow-down"></i>
 <p>SJ Dari Gudang Lain</p>
@@ -271,6 +317,17 @@ gap:15px;
 <a href="../pos.php?id_gudang=<?= $id_gudang ?>" style="text-decoration:none;">
 <i class="fa-solid fa-cash-register"></i>
 <p>POS</p>
+</a>
+</div>
+
+<!-- AP SALES -->
+<div class="icon">
+    <?php if($apsalesbelum > 0): ?>
+    <div class="badge-overlay"><span class="badge-red"><?= $apsalesbelum ?></span></div>
+    <?php endif; ?>
+<a href="../ap_sales.php?id_gudang=<?= $id_gudang ?>" style="text-decoration:none;">
+<i class="fa-solid fa-file-invoice-dollar"></i>
+<p>AR Sales</p>
 </a>
 </div>
 

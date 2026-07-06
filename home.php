@@ -7,7 +7,7 @@ ini_set('display_errors', 1);
 session_start([
     'cookie_lifetime' => 86400,
     'cookie_httponly' => true,
-    'cookie_secure'   => isset($_SERVER['HTTPS']),
+    'cookie_secure' => isset($_SERVER['HTTPS']),
     'use_only_cookies' => true,
     'use_strict_mode' => true,
 ]);
@@ -30,9 +30,9 @@ if (
     exit();
 }
 
-$userid   = $_SESSION['userid'];
-$bagian   = $_SESSION['bagian'];
-$jabatan  = $_SESSION['jabatan'];
+$userid = $_SESSION['userid'];
+$bagian = $_SESSION['bagian'];
+$jabatan = $_SESSION['jabatan'];
 $location = $_SESSION['location']; // HO / CABANG
 
 require_once 'config.php';
@@ -40,10 +40,10 @@ require_once 'config.php';
 // ============================================
 // ✅ KONEKSI DATABASE
 // ============================================
-$servername  = getenv('DB_HOST');
+$servername = getenv('DB_HOST');
 $db_username = getenv('DB_USER');
 $db_password = getenv('DB_PASS');
-$database    = getenv('DB_NAME');
+$database = getenv('DB_NAME');
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$database;charset=utf8mb4", $db_username, $db_password, [
@@ -69,9 +69,13 @@ if ($bagian === 'sales') { // Jika Sales
 // ============================================
 // ✅ ATURAN AKSES MENU
 // ============================================
-if ($bagian === 'owner' || $is_sales) {
-    // OWNER / SUPER ADMIN & SALES → Load semua menu dari DB
+if ($bagian === 'owner') {
+    // OWNER / SUPER ADMIN → Load semua menu dari DB
     $sql = "SELECT * FROM menu WHERE aktif = 1 ORDER BY urutan";
+    $stmt = $pdo->query($sql);
+} elseif ($is_sales) {
+    // SALES → Load menu dari DB kecuali ar.php (id 79)
+    $sql = "SELECT * FROM menu WHERE aktif = 1 AND id_menu != 79 ORDER BY urutan";
     $stmt = $pdo->query($sql);
 } else {
     if ($location === "HO") {
@@ -108,13 +112,77 @@ if ($bagian === 'owner' || $is_sales) {
 $menus = $stmt->fetchAll();
 
 // ============================================
-// ✅ FILTER MENU & PENGUNCIAN UNTUK SALES
+// ✅ HITUNG BADGE NOTIFIKASI
 // ============================================
+$badge_counts = [];
+try {
+    // 1. Barang masuk supplier (sjbeli.php) -> Harga 0 (Belum di-invoice)
+    $q1 = $pdo->query("SELECT COUNT(*) FROM (SELECT SJ FROM transaksiho1 WHERE jumlah_m > 0 GROUP BY SJ HAVING SUM(harga_m) = 0) as t");
+    $c1 = (int) $q1->fetchColumn();
+    $badge_counts[61] = $c1;
+    $badge_counts[62] = $c1;
+
+    // 2. Kurang pelunasan pembelian (ap.php) -> Sisa hutang > 0
+    $q2 = $pdo->query("SELECT COUNT(*) FROM (SELECT inv FROM pembelianho1 WHERE j NOT LIKE 'co%' GROUP BY inv HAVING (MAX(hargat_m) - SUM(COALESCE(bayar,0)) - SUM(COALESCE(pph,0))) > 0) as t");
+    $badge_counts[75] = (int) $q2->fetchColumn();
+
+    // 3. Antar Gudang (sjrekap.php) -> SJ Mutasi belum diterima (di tabel antar)
+    $q3 = $pdo->query("SELECT COUNT(DISTINCT t1.sj) FROM transaksiho1 t1 LEFT JOIN antar tr ON tr.sj = t1.sj WHERE t1.jumlah_k > 0 AND t1.j = 'out' AND tr.notrim IS NULL");
+    $c3 = (int) $q3->fetchColumn();
+    $badge_counts[91] = $c3;
+    $badge_counts[92] = $c3;
+
+    // 4. Penjualan (pos.php) -> SJ Penjualan belum di-invoice
+    $q4 = $pdo->query("SELECT COUNT(*) FROM (SELECT SJ FROM transaksiho1 WHERE jumlah_k > 0 AND j = 'jual' GROUP BY SJ HAVING SUM(harga_k) = 0) as t");
+    $badge_counts[59] = (int) $q4->fetchColumn();
+
+    // 5. Pelunasan penjualan (ar.php) -> Sisa piutang > 0 (dari penjualanHO1)
+    $q5 = $pdo->query("SELECT COUNT(*) FROM penjualanHO1 WHERE sisa > 0");
+    $badge_counts[79] = (int) $q5->fetchColumn();
+
+    // 6. Jurnal ditarik ke LK (jurnal.php) -> Belum posting
+    $q6 = $pdo->query("SELECT COUNT(DISTINCT journal_number) FROM jurnal WHERE posting = 'N' OR posting = '' OR jurnal_sementara != ''");
+    $c6 = (int) $q6->fetchColumn();
+    $badge_counts[32] = $c6;
+    $badge_counts[33] = $c6;
+
+    // 7. Notifikasi akumulasi untuk Sales 1 - 5 (Menu 93 - 97)
+    for ($i = 1; $i <= 5; $i++) {
+        $total_pending = 0;
+
+        // Menghitung Kirim Belum Terima & Terima Belum
+        $stmt_kt = $pdo->prepare("SELECT COUNT(*) FROM antar WHERE (notrim='' OR notrim IS NULL) AND (pengirim = ? OR penerima = ?)");
+        $stmt_kt->execute([$i, $i]);
+        $total_pending += (int) $stmt_kt->fetchColumn();
+
+        // Menghitung AP Sales Belum Lunas
+        $stmt_usr = $pdo->prepare("SELECT userid FROM master_sales WHERE id_gudang = ?");
+        $stmt_usr->execute([$i]);
+        $users = $stmt_usr->fetchAll(PDO::FETCH_COLUMN);
+
+        if (count($users) > 0) {
+            $in_clause = str_repeat('?,', count($users) - 1) . '?';
+            $sql_ap = "SELECT COUNT(*) FROM penjualanHO1 WHERE sisa > 0 AND userinv IN ($in_clause)";
+            $stmt_ap = $pdo->prepare($sql_ap);
+            $stmt_ap->execute($users);
+            $total_pending += (int) $stmt_ap->fetchColumn();
+        }
+
+        $menu_id = 92 + $i; // Menu 93 = Sales 1
+        if ($total_pending > 0) {
+            $badge_counts[$menu_id] = $total_pending;
+        }
+    }
+
+} catch (Exception $e) {
+    // Abaikan jika error
+}
+
 $filtered_menus = [];
 foreach ($menus as $m) {
     // Cek apakah ini menu sales (gudang/home.php?id=...)
     if ($bagian !== 'owner' && preg_match('/gudang\/home\.php\?id=(\d+)/', $m['file_menu'], $matches)) {
-        $id_gudang_menu = (int)$matches[1];
+        $id_gudang_menu = (int) $matches[1];
         if ($is_sales) {
             // Sembunyikan gudang yang BUKAN miliknya, ATAU sembunyikan Gudang Pusat (0)
             if (!in_array($id_gudang_menu, $user_sales_ids) || $id_gudang_menu == 0) {
@@ -131,9 +199,16 @@ foreach ($menus as $m) {
             }
         }
     }
-    
+
     $m['badge1'] = "";
     $m['badge2'] = "";
+
+    // Set badge1 jika ada angka > 0
+    $id_menu = (int) $m['id_menu'];
+    if (isset($badge_counts[$id_menu]) && $badge_counts[$id_menu] > 0) {
+        $m['badge1'] = $badge_counts[$id_menu];
+    }
+
     $filtered_menus[] = $m;
 }
 $menus = $filtered_menus;
@@ -142,484 +217,493 @@ $menus = $filtered_menus;
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>symotech.id</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<style>
-/* ====== GLOBAL STYLES ====== */
-body {
-    background-image: url('background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    font-family: ROG, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; 
-    box-sizing: border-box;
-}
+    <style>
+        /* ====== GLOBAL STYLES ====== */
+        body {
+            background-image: url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: ROG, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
 
-/* ====== HEADER ====== */
-header {
-    position: relative;
-    top: 0;
-    left: 10;
-    width: 100%;
-    text-align: center;
-    margin-bottom: 0;
-}
+        /* ====== HEADER ====== */
+        header {
+            position: relative;
+            top: 0;
+            left: 10;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 0;
+        }
 
-#headt {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 0 20px;
-    box-sizing: border-box;
-}
+        #headt {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
 
-.logo {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    width: 400px;
-    height: auto;
-    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 1));
-}
+        .logo {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 400px;
+            height: auto;
+            filter: drop-shadow(0 0 0px rgba(255, 255, 255, 1));
+        }
 
-/* ====== CONTAINER ====== */
-.container {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 6rem 10px 4rem;
-    box-sizing: border-box;
-    text-align: center;
-}
+        /* ====== CONTAINER ====== */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 6rem 10px 4rem;
+            box-sizing: border-box;
+            text-align: center;
+        }
 
-/* ====== ANIMATION ====== */
-@keyframes jatuh {
-    0% {
-        transform: translateY(-100px);
-        opacity: 0;
-    }
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
+        /* ====== ANIMATION ====== */
+        @keyframes jatuh {
+            0% {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
 
-/* ====== TEXT STYLES ====== */
-h1 {
-    margin: 0;
-    text-align: center;
-    font-size: 48px;
-    overflow: hidden;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: white;
-}
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
 
-h2 {
-    color: white;
-    margin: 10px 0 0;
-    text-align: center;
-}
+        /* ====== TEXT STYLES ====== */
+        h1 {
+            margin: 0;
+            text-align: center;
+            font-size: 48px;
+            overflow: hidden;
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: white;
+        }
 
-h3 {
-    color: white;
-    margin: 10px 0;
-    font-size: 36px;
-    text-align: center;
-    animation: jatuh 2s ease-in-out forwards;
-}
+        h2 {
+            color: white;
+            margin: 10px 0 0;
+            text-align: center;
+        }
 
-h4 {
-    color: white;
-    margin: 0;
-    text-align: center;
-    font-size: 20px;
-}
+        h3 {
+            color: white;
+            margin: 10px 0;
+            font-size: 36px;
+            text-align: center;
+            animation: jatuh 2s ease-in-out forwards;
+        }
 
-p {
-    color: white;
-    margin: 0;
-}
+        h4 {
+            color: white;
+            margin: 0;
+            text-align: center;
+            font-size: 20px;
+        }
 
-/* ====== ANIMATED TEXT ====== */
-.animated-text {
-    display: inline-block;
-    animation: jatuh 1s ease-in-out forwards;
-    opacity: 0;
-}
+        p {
+            color: white;
+            margin: 0;
+        }
 
-/* ====== HOME ICON ====== */
-.home-icon {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    color: #f00;
-    transform: scale(1.3);
-    transition: transform 0.3s;
-}
+        /* ====== ANIMATED TEXT ====== */
+        .animated-text {
+            display: inline-block;
+            animation: jatuh 1s ease-in-out forwards;
+            opacity: 0;
+        }
 
-.home-icon:hover {
-    transform: scale(3.1);
-    color: blue;
-}
+        /* ====== HOME ICON ====== */
+        .home-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #f00;
+            transform: scale(1.3);
+            transition: transform 0.3s;
+        }
 
-/* ====== ICON GRID ====== */
-.icons {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
-    gap: 20px;
-    justify-content: center;
-    padding: 20px;
-    width: 100%;
-    box-sizing: border-box; /* KUNCI: Agar padding tidak menambah lebar */
-}
+        .home-icon:hover {
+            transform: scale(3.1);
+            color: blue;
+        }
 
-.icon {
-    text-align: center;
-    /* margin: 10px; <--- DIHAPUS: Ini biang kerok yang bikin asimetris karena sudah pakai gap di .icons */
-    padding: 10px;
-    background-color: rgba(10, 100, 10, 0.8);
-    border-radius: 10px;
-    transition: transform 0.3s ease;
-}
+        /* ====== ICON GRID ====== */
+        .icons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 20px;
+            justify-content: center;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            /* KUNCI: Agar padding tidak menambah lebar */
+        }
 
-.icon i {
-    font-size: 50px;
-    background: linear-gradient(to right, #fff, #fff, #fff, #fff, skyblue, #0e504d);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        .icon {
+            text-align: center;
+            /* margin: 10px; <--- DIHAPUS: Ini biang kerok yang bikin asimetris karena sudah pakai gap di .icons */
+            padding: 10px;
+            background-color: rgba(10, 100, 10, 0.8);
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
 
-.icon p {
-    color: white;
-    font-weight: bold;
-    margin: 10px 0 0;
-}
+        .icon i {
+            font-size: 50px;
+            background: linear-gradient(to right, #fff, #fff, #fff, #fff, skyblue, #0e504d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-.icon:hover {
-    transform: scale(1.05) translateY(-5px);
-    box-shadow: 0 10px 15px rgba(0,0,0,0.3);
-}
+        .icon p {
+            color: white;
+            font-weight: bold;
+            margin: 10px 0 0;
+        }
 
-/* ====== CONTACT FORM ====== */
-.contact-form {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
+        .icon:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+        }
 
-.contact-form h3 {
-    color: white;
-    margin-bottom: 20px;
-}
+        /* ====== CONTACT FORM ====== */
+        .contact-form {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
 
-.contact-form input[type="text"],
-.contact-form input[type="email"],
-.contact-form textarea {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: none;
-    border-radius: 5px;
-    background-color: #06424a;
-    color: white;
-    transition: background-color 0.3s;
-}
+        .contact-form h3 {
+            color: white;
+            margin-bottom: 20px;
+        }
 
-.contact-form input:focus,
-.contact-form textarea:focus {
-    outline: none;
-    box-shadow: 0 0 5px #0e504d;
-}
+        .contact-form input[type="text"],
+        .contact-form input[type="email"],
+        .contact-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #06424a;
+            color: white;
+            transition: background-color 0.3s;
+        }
 
-.contact-form button {
-    background-color: #06424a;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 20px;
-    font-size: 30px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    width: 500%;
-}
+        .contact-form input:focus,
+        .contact-form textarea:focus {
+            outline: none;
+            box-shadow: 0 0 5px #0e504d;
+        }
 
-.contact-form button:hover {
-    background-color: #0e504d;
-}
+        .contact-form button {
+            background-color: #06424a;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 500%;
+        }
 
-form button[type="submit"] {
-    background-color: #0529f5;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 15px;
-    width: 30%;
-    margin-bottom: 20px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
+        .contact-form button:hover {
+            background-color: #0e504d;
+        }
 
-/* ====== FOOTER ====== */
-footer {
-    text-align: center;
-    padding: 1.5rem 0;
-    width: 100%;
-    margin-top: auto;
-}
+        form button[type="submit"] {
+            background-color: #0529f5;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 15px;
+            width: 30%;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
 
-footer p {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #000000;
-    font-weight: bold;
-    letter-spacing: 1px;
-}
+        /* ====== FOOTER ====== */
+        footer {
+            text-align: center;
+            padding: 1.5rem 0;
+            width: 100%;
+            margin-top: auto;
+        }
 
-/* ====== SECTIONS ====== */
-.section {
-    background: #fff;
-    padding: 20px;
-    margin-bottom: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px #ccc;
-}
+        footer p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #000000;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
 
-.status {
-    font-size: 18px;
-}
+        /* ====== SECTIONS ====== */
+        .section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
 
-.cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-}
+        .status {
+            font-size: 18px;
+        }
 
-.card {
-    background-color: #e9f5ff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-}
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
 
-.card:hover {
-    transform: scale(1.02);
-}
+        .card {
+            background-color: #e9f5ff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
 
-.card h4 {
-    margin: 0 0 10px;
-    color: #0056b3;
-}
+        .card:hover {
+            transform: scale(1.02);
+        }
 
-.card p {
-    margin: 0;
-    color: #333;
-}
+        .card h4 {
+            margin: 0 0 10px;
+            color: #0056b3;
+        }
 
-/* ====== SECTION BACKGROUNDS ====== */
-#tentang {
-    background-image: linear-gradient(to right, #41acba, #015d91, #06424a);
-    color: white;
-}
+        .card p {
+            margin: 0;
+            color: #333;
+        }
 
-#layanan {
-    background-image: linear-gradient(to right, #41acba, #bf721b, #06424a);
-    color: white;
-}
+        /* ====== SECTION BACKGROUNDS ====== */
+        #tentang {
+            background-image: linear-gradient(to right, #41acba, #015d91, #06424a);
+            color: white;
+        }
 
-#portofolio {
-    background-image: linear-gradient(to right, #41acba, #8c3577, #06424a);
-    color: white;
-}
+        #layanan {
+            background-image: linear-gradient(to right, #41acba, #bf721b, #06424a);
+            color: white;
+        }
 
-#kontak {
-    background-image: linear-gradient(to right, #41acba, #0c7d34, #06424a);
-    color: white;
-}
+        #portofolio {
+            background-image: linear-gradient(to right, #41acba, #8c3577, #06424a);
+            color: white;
+        }
 
-/* ====== PORTOFOLIO GRID ====== */
-.portofolio-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
+        #kontak {
+            background-image: linear-gradient(to right, #41acba, #0c7d34, #06424a);
+            color: white;
+        }
 
-.icon-box {
-    width: 100%;
-}
-/* ===== BADGE OVERLAY ===== */
-.icon {
-    position: relative;
-    overflow: visible;
-}
+        /* ====== PORTOFOLIO GRID ====== */
+        .portofolio-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
 
-.badge-overlay {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    z-index: 50;
-}
+        .icon-box {
+            width: 100%;
+        }
 
-.badge-overlay span {
-    padding: 3px 7px;
-    min-width: 26px;
-    text-align: center;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 700;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-}
+        /* ===== BADGE OVERLAY ===== */
+        .icon {
+            position: relative;
+            overflow: visible;
+        }
 
-.badge-red {
-    background: #d9534f;  
-    color: #fff;
-}
+        .badge-overlay {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 50;
+        }
 
-.badge-yellow {
-    background: #f0ad4e;
-    color: #111;
-}
+        .badge-overlay span {
+            padding: 3px 7px;
+            min-width: 26px;
+            text-align: center;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
 
-/* ====== TABLET/MOBILE RESPONSIVE ====== */
-@media only screen and (max-width: 720px) {
-    .icons {
-        padding: 10px; /* Lebihkan sedikit ruang bernafas di HP */
-        gap: 15px; /* Jarak antar kotak disesuaikan */
-        grid-template-columns: repeat(3, 1fr);
-    }
+        .badge-red {
+            background: #d9534f;
+            color: #fff;
+        }
 
-    .icon {
-        aspect-ratio: 1 / 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-    }
+        .badge-yellow {
+            background: #f0ad4e;
+            color: #111;
+        }
 
-    .icon i {
-        font-size: 35px;
-    }
+        /* ====== TABLET/MOBILE RESPONSIVE ====== */
+        @media only screen and (max-width: 720px) {
+            .icons {
+                grid-template-columns: repeat(3, 1fr);
+                padding: 10px;
+                /* Lebihkan sedikit ruang bernafas di HP */
+                gap: 15px;
+                /* Jarak antar kotak disesuaikan */
+            }
 
-    .icon p {
-        font-size: 12px;
-    }
+            .icon {
+                aspect-ratio: 1 / 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-radius: 8px;
+            }
 
-    .logo {
-        width: 180px;
-        height: auto;
-    }
-    
-    h1 {
-        font-size: 22px; /* Dibuat lebih kecil sesuai permintaan */
-        margin-top: 30px;
-        word-wrap: break-word; /* KUNCI: Mencegah kata panjang menjebol layar */
-        padding: 0 10px;
-    }
-}
-</style>
+            .icon i {
+                font-size: 35px;
+            }
 
-    
-    
+            .icon p {
+                font-size: 12px;
+            }
+
+            .logo {
+                width: 180px;
+                height: auto;
+            }
+
+            h1 {
+                font-size: 22px;
+                /* Dibuat lebih kecil sesuai permintaan */
+                margin-top: 30px;
+                word-wrap: break-word;
+                /* KUNCI: Mencegah kata panjang menjebol layar */
+                padding: 0 10px;
+            }
+        }
+    </style>
+
+
+
 </head>
 
- 
+
 <body>
-   
-      
-        
-<header style="position: fixed; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; z-index: 1000; box-sizing: border-box;">
-    <img src="assets/img/logo.png" alt="Logo" width="100">
-    <a href="logout.php" style="text-decoration: none; color: red; display: flex; flex-direction: column; align-items: center;">
-        <i class="fa-solid fa-person-walking-dashed-line-arrow-right" style="font-size: 24px;"></i>
-        <p style="margin: 5px 0 0; font-size: 14px; font-weight: bold;">logout</p>
-    </a>
-</header>
 
 
-                  
-   <div class="container">
 
-    <h1 id="animated-heading">PT. BFB</h1>
+    <header style="position: fixed; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; box-sizing: border-box; z-index: 999; background: transparent;">
+        <img src="assets/img/logo.png" alt="Logo" style="max-width: 50vw; max-height: 100px; height: auto; object-fit: contain;">
+        <a href="logout.php" class="left-icon" style="font-size: 24px; text-decoration: none; color: red; text-align: center; margin-top: 5px;">
+            <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i>
+            <p style="margin: 0; font-size: 12px; line-height: 1;">logout</p>
+        </a>
+    </header>
 
-    <section id="hero">
-        <div class="icons">
 
-        <?php if (!empty($menus)): ?>
-            <?php foreach ($menus as $m): ?>
-            
-                <div class="icon">
 
-                    <?php if ($m['badge1'] !== "" || $m['badge2'] !== ""): ?>
-                        <div class="badge-overlay">
-    <?php if (!empty($m['badge1'])): ?>
-        <span class="badge-red"><?= htmlspecialchars($m['badge1']) ?></span>
-    <?php endif; ?>
-    <?php if (!empty($m['badge2'])): ?>
-        <span class="badge-yellow"><?= htmlspecialchars($m['badge2']) ?></span>
-    <?php endif; ?>
-</div>
+    <div class="container">
 
-                    <?php endif; ?>
+        <h1 id="animated-heading">PT. BFB</h1>
 
-                    <a href="<?= htmlspecialchars($m['file_menu']) ?>" style="text-decoration:none;">
-                        <i class="<?= htmlspecialchars($m['icon_menu']) ?>"></i>
-                        <p style="color:white; font-weight:bold;"><?= htmlspecialchars($m['nama_menu']) ?></p>
-                    </a>
+        <section id="hero">
+            <div class="icons">
 
-                </div>
+                <?php if (!empty($menus)): ?>
+                    <?php foreach ($menus as $m): ?>
 
-            <?php endforeach; ?>
-        <?php endif; ?>
+                        <div class="icon">
 
-        </div>
-    </section>
+                            <?php if ($m['badge1'] !== "" || $m['badge2'] !== ""): ?>
+                                <div class="badge-overlay">
+                                    <?php if (!empty($m['badge1'])): ?>
+                                        <span class="badge-red"><?= htmlspecialchars($m['badge1']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($m['badge2'])): ?>
+                                        <span class="badge-yellow"><?= htmlspecialchars($m['badge2']) ?></span>
+                                    <?php endif; ?>
+                                </div>
 
-</div>
+                            <?php endif; ?>
 
-<footer>
-    <p>© 2025 SYMOTECH</p>
-</footer>
+                            <a href="<?= htmlspecialchars($m['file_menu']) ?>" style="text-decoration:none;">
+                                <i class="<?= htmlspecialchars($m['icon_menu']) ?>"></i>
+                                <p style="color:white; font-weight:bold;"><?= htmlspecialchars($m['nama_menu']) ?></p>
+                            </a>
 
-<script>
-// ==== Animasi Tulisan PT ARNI FAMILY ====
-document.addEventListener("DOMContentLoaded", function() {
-    var heading = document.getElementById('animated-heading');
-    var text = heading.textContent.trim();
-    heading.textContent = '';
+                        </div>
 
-    for (var i = 0; i < text.length; i++) {
-        var span = document.createElement('span');
-        span.innerHTML = text[i] === ' ' ? '&nbsp;' : text[i];
-        span.classList.add('animated-text');
-        span.style.animationDelay = (i * 0.1) + 's';
-        heading.appendChild(span);
-    }
-});
+                    <?php endforeach; ?>
+                <?php endif; ?>
 
-// // ==== Disable klik kanan + F12 ====
-// document.addEventListener('contextmenu', e => e.preventDefault());
-// document.addEventListener('keydown', function(e) {
-//     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && ['I','C'].includes(String.fromCharCode(e.keyCode))) || (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) {
-//         e.preventDefault();
-//     }
-// });
-</script>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>© 2025 SYMOTECH</p>
+    </footer>
+
+    <script>
+        // ==== Animasi Tulisan PT ARNI FAMILY ====
+        document.addEventListener("DOMContentLoaded", function () {
+            var heading = document.getElementById('animated-heading');
+            var text = heading.textContent.trim();
+            heading.textContent = '';
+
+            for (var i = 0; i < text.length; i++) {
+                var span = document.createElement('span');
+                span.textContent = text[i];
+                span.classList.add('animated-text');
+                span.style.animationDelay = (i * 0.1) + 's';
+                heading.appendChild(span);
+            }
+        });
+
+        // // ==== Disable klik kanan + F12 ====
+        // document.addEventListener('contextmenu', e => e.preventDefault());
+        // document.addEventListener('keydown', function(e) {
+        //     if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && ['I','C'].includes(String.fromCharCode(e.keyCode))) || (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) {
+        //         e.preventDefault();
+        //     }
+        // });
+    </script>
 
 </body>
+
 </html>

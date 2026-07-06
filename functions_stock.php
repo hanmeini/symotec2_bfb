@@ -3,7 +3,7 @@
 
 function recalculate_stock_history($conn, $kodeb) {
     // Ambil semua histori stock untuk kodeb ini, urutkan berdasarkan tanggal dan ids
-    $stmt = $conn->prepare("SELECT ids, jumlah_m, harga_m, jumlah_k FROM stock WHERE kodeb = ? ORDER BY tanggal_transaksi ASC, ids ASC");
+    $stmt = $conn->prepare("SELECT ids, jumlah_m, harga_m, hargat_m, jumlah_k FROM stock WHERE kodeb = ? ORDER BY tanggal_transaksi ASC, ids ASC");
     $stmt->bind_param("s", $kodeb);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -17,6 +17,7 @@ function recalculate_stock_history($conn, $kodeb) {
         $ids = $row['ids'];
         $jm = (float)$row['jumlah_m'];
         $hm = (float)$row['harga_m'];
+        $htm = (float)$row['hargat_m'];
         $jk = (float)$row['jumlah_k'];
         
         $hpp = 0.0;
@@ -25,7 +26,9 @@ function recalculate_stock_history($conn, $kodeb) {
             // Masuk
             $s_baru = $s_current + $jm;
             if ($s_baru > 0) {
-                $r_baru = (($s_current * $r_current) + ($jm * $hm)) / $s_baru;
+                // Harga total pembelanjaan saat ini. Jika hargat_m 0, fallback ke jm * hm
+                $cost_current = ($htm > 0) ? $htm : ($jm * $hm);
+                $r_baru = (($s_current * $r_current) + $cost_current) / $s_baru;
             } else {
                 $r_baru = $r_current;
             }
@@ -49,5 +52,13 @@ function recalculate_stock_history($conn, $kodeb) {
 
     $stmt->close();
     $update_stmt->close();
+
+    // Update dpp (Harga Rata-Rata Terakhir) di tabel b
+    if ($r_current > 0) {
+        $stmt_b = $conn->prepare("UPDATE b SET dpp = ? WHERE kode_b = ?");
+        $stmt_b->bind_param("ds", $r_current, $kodeb);
+        $stmt_b->execute();
+        $stmt_b->close();
+    }
 }
 ?>
