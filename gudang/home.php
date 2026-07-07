@@ -339,6 +339,16 @@ gap:15px;
 </a>
 </div>
 
+<?php if ($id_gudang == 0): ?>
+<div class="icon">
+<a href="../retur_pembelian.php" style="text-decoration:none;">
+<i class="fa-solid fa-truck-ramp-box"></i>
+<p>Retur Pembelian</p>
+</a>
+</div>
+<?php endif; ?>
+
+
 <div class="icon">
 <a href="../reports.php?id_gudang=<?= $id_gudang ?>" style="text-decoration:none;">
 <i class="fa-solid fa-chart-line"></i>

@@ -36,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
         $conn->begin_transaction();
         try {
             // Cek Invoice Pembelian
-            $stmt_inv = $conn->prepare("SELECT * FROM pembelianho1 WHERE j = ? LIMIT 1");
-            $stmt_inv->bind_param("s", $invoice_no);
+            $stmt_inv = $conn->prepare("SELECT * FROM pembelianho1 WHERE inv = ? OR j = ? OR sj = ? LIMIT 1");
+            $stmt_inv->bind_param("sss", $invoice_no, $invoice_no, $invoice_no);
             $stmt_inv->execute();
             $inv_data = $stmt_inv->get_result()->fetch_assoc();
             $stmt_inv->close();
@@ -45,14 +45,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
             if (!$inv_data) {
                 throw new Exception("Nomor Invoice Pembelian tidak ditemukan.");
             }
+            $actual_j = $inv_data['j'];
             
             $total_retur_dpp = 0;
             $total_retur_ppn = 0;
             $total_retur_hpp = 0;
             $total_retur_harga = 0;
             
+            date_default_timezone_set('Asia/Jakarta');
             $tgl = date('Y-m-d H:i:s');
-            $kode_booking_titipan = "RETPEM-" . $invoice_no . "-" . time();
+            $kode_booking_titipan = "RETPEM-" . str_replace('/', '', $actual_j) . "-" . time();
             $j_retur = $kode_booking_titipan;
             
             foreach ($kode_b_arr as $i => $kb) {
@@ -61,9 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 
                 if ($retur_jml <= 0) continue;
                 
-                // Ambil data asli dari stock (pembelian masuk)
-                $stmt_stk = $conn->prepare("SELECT * FROM stock WHERE ids = ? AND sj = ? AND kodeb = ? LIMIT 1");
-                $stmt_stk->bind_param("iss", $s_id, $invoice_no, $kb);
+                // Ambil data asli dari stock berdasarkan ID
+                $stmt_stk = $conn->prepare("SELECT * FROM stock WHERE ids = ? AND kodeb = ? LIMIT 1");
+                $stmt_stk->bind_param("is", $s_id, $kb);
                 $stmt_stk->execute();
                 $stk_data = $stmt_stk->get_result()->fetch_assoc();
                 $stmt_stk->close();
@@ -73,11 +75,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 }
                 
                 $qty_beli = (float)$stk_data['jumlah_m'];
-                $r_sebelum = (float)$stk_data['r'];
-                $max_bisa_retur = $qty_beli - $r_sebelum;
+                
+                // Cari total yang sudah diretur dari invoice ini sebelumnya
+                $ket_ret = "Retur Pembelian Inv: " . $actual_j;
+                $stmt_ret = $conn->prepare("SELECT SUM(jumlah_k) AS tot_retur FROM stock WHERE sj = ? AND kodeb = ?");
+                $stmt_ret->bind_param("ss", $ket_ret, $kb);
+                $stmt_ret->execute();
+                $row_ret = $stmt_ret->get_result()->fetch_assoc();
+                $sudah_retur = (float)$row_ret['tot_retur'];
+                $stmt_ret->close();
+                
+                $max_bisa_retur = $qty_beli - $sudah_retur;
                 
                 if ($retur_jml > $max_bisa_retur) {
-                    throw new Exception("Jumlah retur barang $kb melebihi sisa (Max: $max_bisa_retur).");
+                    throw new Exception("Jumlah retur untuk barang $kb melebihi sisa yang bisa diretur (Max: $max_bisa_retur).");
                 }
                 
                 // Harga Satuan Beli
@@ -102,12 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 // 2. Insert record Retur Keluar ke stock (barang dikembalikan ke Supplier)
                 // Keluar = masuk ke jumlah_k, harga_k, ppn_k
                 $status = 'Retur Keluar'; 
-                $ket_retur = "Retur Pembelian Inv: " . $invoice_no;
+                $ket_retur = "Retur Pembelian Inv: " . $actual_j;
                 $hargat_k = $dpp_retur + $ppn_retur;
                 
                 $stmt_in = $conn->prepare("INSERT INTO stock (tanggal_transaksi, kodeb, jumlah_k, harga_k, ppn_k, hargat_k, hpp, userid, sj, id_gudang, bulan, noseri) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt_in->bind_param("ssdddddssiis", 
-                    $tgl, $kb, $retur_jml, $hpp_satuan, $ppn_retur, $hargat_k, $hpp_satuan, 
+                    $tgl, $kb, $retur_jml, $dpp_retur, $ppn_retur, $hargat_k, $hpp_satuan, 
                     $username1, $ket_retur, $id_gudang, $stk_data['bulan'], $stk_data['noseri']
                 );
                 $stmt_in->execute();
@@ -133,12 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 
                 // 4. Masukkan ke tabel titipanap (Deposit / Piutang Supplier)
                 // Cek id supplier (jika ada) dari nama supplier
-                $sup_id = 0;
-                $qsup = $conn->prepare("SELECT id FROM sup WHERE nama_sup = ? LIMIT 1");
+                // Ambil ID supplier untuk tabel titipanap
+                $qsup = $conn->prepare("SELECT id FROM sup WHERE kode = ? LIMIT 1");
                 $qsup->bind_param("s", $inv_data['sup']);
                 $qsup->execute();
-                $rsup = $qsup->get_result();
-                if ($row_s = $rsup->fetch_assoc()) $sup_id = $row_s['id'];
+                $rsup = $qsup->get_result()->fetch_assoc();
+                $sup_id = $rsup ? $rsup['id'] : 0;
                 $qsup->close();
 
                 $stmt_titipan = $conn->prepare("INSERT INTO titipanap (kode_booking, tanggal, nominal, description, cust_id, sup, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -154,31 +165,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 
                 $keterangan_jur = "Retur Pembelian " . $invoice_no;
                 
-                // 21104 (Titipan Supplier) - Debet (Mengurangi Hutang / Piutang)
-                $coa_titip = "21104"; $nama_titip = "Titipan Supplier"; $d_titip = $total_retur_harga; $k_titip = 0;
+                // 11203 (Titipan Supplier) - Debet (Mengurangi Hutang / Piutang)
+                $coa_titip = "11203"; $nama_titip = "Titipan Supplier"; $d_titip = $total_retur_harga; $k_titip = 0;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_titip, $d_titip, $k_titip, $nama_titip);
                 $stmt_jur->execute();
-
-                // 51201 (Retur Pembelian) - Kredit
-                $coa_rp = "51201"; $nama_rp = "Retur Pembelian"; $d_rp = 0; $k_rp = $total_retur_dpp;
-                $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_rp, $d_rp, $k_rp, $nama_rp);
-                $stmt_jur->execute();
                 
-                // 12102 (PPN Masukan) - Kredit (Dibatalkan)
+                // 12102 (PPN Masukan) - Kredit
                 if ($total_retur_ppn > 0) {
                     $coa_ppn = "12102"; $nama_ppn = "PPN Masukan"; $d_ppn = 0; $k_ppn = $total_retur_ppn;
                     $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_ppn, $d_ppn, $k_ppn, $nama_ppn);
                     $stmt_jur->execute();
                 }
 
-                // 11301 (Inventory) - Kredit (Barang Keluar)
-                $coa_inv = "11301"; $nama_inv = "Inventory"; $d_inv = 0; $k_inv = $total_retur_hpp;
+                // 11301 (Persediaan Barang Dagang) - Kredit
+                $coa_inv = "11301"; $nama_inv = "Persediaan Barang Dagang"; $d_inv = 0; $k_inv = $total_retur_dpp;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_inv, $d_inv, $k_inv, $nama_inv);
-                $stmt_jur->execute();
-                
-                // 51101 (HPP) - Debet (Untuk menyeimbangkan Inventory keluar jika diperlukan)
-                $coa_hpp = "51101"; $nama_hpp = "HPP"; $d_hpp = $total_retur_hpp; $k_hpp = 0;
-                $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_hpp, $d_hpp, $k_hpp, $nama_hpp);
                 $stmt_jur->execute();
                 
                 $stmt_jur->close();
@@ -202,27 +203,43 @@ $items = [];
 $supplier_name = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
     if (!empty($search_inv)) {
-        // Cek Invoice di pembelianho1
-        $q_cek = "SELECT sup, j FROM pembelianho1 WHERE j = ? LIMIT 1";
+        // Cek Invoice di pembelianho1 (Bisa mencari lewat Nomor Supplier ataupun J internal)
+        $q_cek = "SELECT sup, j, inv, sj FROM pembelianho1 WHERE inv = ? OR j = ? LIMIT 1";
         $stmt_c = $conn->prepare($q_cek);
-        $stmt_c->bind_param("s", $search_inv);
+        $stmt_c->bind_param("ss", $search_inv, $search_inv);
         $stmt_c->execute();
         $res_c = $stmt_c->get_result();
         if ($row_c = $res_c->fetch_assoc()) {
             $supplier_name = $row_c['sup'];
+            $actual_j = $row_c['j'];
+            $actual_inv = $row_c['inv'];
+            $actual_sj = $row_c['sj'];
             
             // Cari di stock table (pembelian = jumlah_m > 0)
+            // Stock MKB bisa menaruh referensi di kolom sj, inv, atau J
             $q_inv = "SELECT stock.ids, stock.kodeb, stock.jumlah_m, stock.harga_m, stock.ppn_m, stock.hpp, stock.r, b.nama_b AS nama 
                       FROM stock 
                       LEFT JOIN b ON stock.kodeb = b.kode_b 
-                      WHERE sj = ? AND jumlah_m > 0 AND (id_gudang = 0 OR id_gudang IS NULL)";
+                      WHERE (stock.sj = ? OR stock.inv = ? OR stock.j = ?) AND stock.jumlah_m > 0 AND (stock.id_gudang = 0 OR stock.id_gudang IS NULL)";
             
             $stmt_s = $conn->prepare($q_inv);
-            $stmt_s->bind_param("s", $search_inv);
+            $stmt_s->bind_param("sss", $actual_sj, $actual_inv, $actual_j);
             $stmt_s->execute();
             $res_s = $stmt_s->get_result();
             while($r = $res_s->fetch_assoc()){
-                if ((float)$r['jumlah_m'] - (float)$r['r'] > 0) {
+                // Cari total yang sudah diretur dari invoice ini
+                $ket_ret = "Retur Pembelian Inv: " . $actual_j;
+                $stmt_ret = $conn->prepare("SELECT SUM(jumlah_k) AS tot_retur FROM stock WHERE sj = ? AND kodeb = ?");
+                $stmt_ret->bind_param("ss", $ket_ret, $r['kodeb']);
+                $stmt_ret->execute();
+                $row_ret = $stmt_ret->get_result()->fetch_assoc();
+                $sudah_retur = (float)$row_ret['tot_retur'];
+                $stmt_ret->close();
+                
+                $sisa_bisa_retur = (float)$r['jumlah_m'] - $sudah_retur;
+                
+                if ($sisa_bisa_retur > 0) {
+                    $r['sisa_bisa_retur'] = $sisa_bisa_retur;
                     $items[] = $r;
                 }
             }
@@ -308,18 +325,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
                 <tr>
                     <th>Kode Barang</th>
                     <th>Nama Barang</th>
-                    <th>Harga Beli Satuan</th>
+                    <th>Harga Satuan</th>
                     <th>PPN Satuan</th>
                     <th>Qty Beli</th>
-                    <th>Max Retur</th>
+                    <th>Sudah Retur</th>
+                    <th>Max Bisa Retur</th>
                     <th style="width: 120px;">Qty Retur</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($items as $item): 
                     $qty = (float)$item['jumlah_m'];
-                    $r_sebelum = (float)$item['r'];
-                    $max_retur = $qty - $r_sebelum;
+                    $sisa_bisa_retur = (float)$item['sisa_bisa_retur'];
+                    $sudah_retur = $qty - $sisa_bisa_retur;
                     
                     $harga_sat = $qty > 0 ? (float)$item['harga_m'] / $qty : 0;
                     $ppn_sat = $qty > 0 ? (float)$item['ppn_m'] / $qty : 0;
@@ -327,16 +345,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
                 <tr>
                     <td>
                         <?= htmlspecialchars($item['kodeb']) ?>
-                        <input type="hidden" name="stock_ids[]" value="<?= $item['ids'] ?>">
                         <input type="hidden" name="kode_b[]" value="<?= htmlspecialchars($item['kodeb']) ?>">
+                        <input type="hidden" name="stock_ids[]" value="<?= htmlspecialchars($item['ids']) ?>">
                     </td>
                     <td><?= htmlspecialchars($item['nama']) ?></td>
-                    <td><?= number_format($harga_sat, 2) ?></td>
-                    <td><?= number_format($ppn_sat, 2) ?></td>
-                    <td><?= $qty ?></td>
-                    <td><strong style="color:#1976d2;"><?= $max_retur ?></strong></td>
+                    <td><?= number_format($harga_sat, 2, ',', '.') ?></td>
+                    <td><?= number_format($ppn_sat, 2, ',', '.') ?></td>
+                    <td><?= number_format($qty, 2, ',', '.') ?></td>
+                    <td><?= number_format($sudah_retur, 2, ',', '.') ?></td>
+                    <td><?= number_format($sisa_bisa_retur, 2, ',', '.') ?></td>
                     <td>
-                        <input type="number" name="qty_retur[]" min="0" max="<?= $max_retur ?>" step="0.01" value="0" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; text-align:center;">
+                        <input type="number" name="qty_retur[]" min="0" max="<?= $sisa_bisa_retur ?>" step="0.01" value="0" style="width: 80px; padding:8px; border:1px solid #ccc; border-radius:4px; text-align:center;">
                     </td>
                 </tr>
                 <?php endforeach; ?>

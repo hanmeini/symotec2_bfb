@@ -69,8 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
             $total_retur_hpp = 0;
             $total_retur_harga = 0;
             
+            date_default_timezone_set('Asia/Jakarta');
             $tgl = date('Y-m-d H:i:s');
-            $kode_booking_titipan = "RETUR-" . $invoice_no . "-" . time();
+            $kode_booking_titipan = "RETUR-" . str_replace('/', '', $invoice_no) . "-" . time();
             $j_retur = $kode_booking_titipan;
             
             foreach ($kode_b_arr as $i => $kb) {
@@ -80,8 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 if ($retur_jml <= 0) continue;
                 
                 // Ambil data asli dari stock untuk divalidasi dan dihitung
-                $stmt_stk = $conn->prepare("SELECT * FROM stock WHERE ids = ? AND sj = ? AND kodeb = ? LIMIT 1");
-                $stmt_stk->bind_param("iss", $s_id, $invoice_no, $kb);
+                $stmt_stk = $conn->prepare("SELECT * FROM stock WHERE ids = ? AND kodeb = ? LIMIT 1");
+                $stmt_stk->bind_param("is", $s_id, $kb);
                 $stmt_stk->execute();
                 $stk_data = $stmt_stk->get_result()->fetch_assoc();
                 $stmt_stk->close();
@@ -91,8 +92,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 }
                 
                 $qty_jual = (float)$stk_data['jumlah_k'];
-                $r_sebelum = (float)$stk_data['r'];
-                $max_bisa_retur = $qty_jual - $r_sebelum;
+                
+                // Cari total yang sudah diretur dari invoice ini sebelumnya
+                $ket_ret = "Retur Penjualan Inv: " . $invoice_no;
+                $stmt_ret = $conn->prepare("SELECT SUM(jumlah_m) AS tot_retur FROM stock WHERE sj = ? AND kodeb = ?");
+                $stmt_ret->bind_param("ss", $ket_ret, $kb);
+                $stmt_ret->execute();
+                $row_ret = $stmt_ret->get_result()->fetch_assoc();
+                $sudah_retur = (float)$row_ret['tot_retur'];
+                $stmt_ret->close();
+                
+                $max_bisa_retur = $qty_jual - $sudah_retur;
                 
                 if ($retur_jml > $max_bisa_retur) {
                     throw new Exception("Jumlah retur untuk barang $kb melebihi sisa yang bisa diretur (Max: $max_bisa_retur).");
@@ -172,25 +182,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_rp, $d_rp, $k_rp, $nama_rp);
                 $stmt_jur->execute();
                 
-                // 21201 (PPN Return) - Debet
+                // 21201 (PPN Keluaran) - Debet
                 if ($total_retur_ppn > 0) {
-                    $coa_ppn = "21201"; $nama_ppn = "PPN Return"; $d_ppn = $total_retur_ppn; $k_ppn = 0;
+                    $coa_ppn = "21201"; $nama_ppn = "PPN Keluaran"; $d_ppn = $total_retur_ppn; $k_ppn = 0;
                     $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_ppn, $d_ppn, $k_ppn, $nama_ppn);
                     $stmt_jur->execute();
                 }
                 
-                // 21103 (Titipan Customer) - Kredit
-                $coa_titip = "21103"; $nama_titip = "Titipan Customer"; $d_titip = 0; $k_titip = $total_retur_harga;
+                // 11201 (Piutang Dagang) - Kredit
+                $coa_titip = "11201"; $nama_titip = "Piutang Dagang"; $d_titip = 0; $k_titip = $total_retur_harga;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_titip, $d_titip, $k_titip, $nama_titip);
                 $stmt_jur->execute();
                 
-                // 11301 (Inventory) - Debet
-                $coa_inv = "11301"; $nama_inv = "Inventory"; $d_inv = $total_retur_hpp; $k_inv = 0;
+                // 11301 (Persediaan Barang Dagang) - Debet
+                $coa_inv = "11301"; $nama_inv = "Persediaan Barang Dagang"; $d_inv = $total_retur_hpp; $k_inv = 0;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_inv, $d_inv, $k_inv, $nama_inv);
                 $stmt_jur->execute();
                 
-                // 51101 (HPP) - Kredit
-                $coa_hpp = "51101"; $nama_hpp = "HPP"; $d_hpp = 0; $k_hpp = $total_retur_hpp;
+                // 51101 (Harga Pokok Penjualan) - Kredit
+                $coa_hpp = "51101"; $nama_hpp = "Harga Pokok Penjualan"; $d_hpp = 0; $k_hpp = $total_retur_hpp;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_hpp, $d_hpp, $k_hpp, $nama_hpp);
                 $stmt_jur->execute();
                 
@@ -242,8 +252,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
             $stmt_s->execute();
             $res_s = $stmt_s->get_result();
             while($r = $res_s->fetch_assoc()){
-                // Hanya tampilkan jika masih ada sisa yang bisa diretur (jumlah_k - r > 0)
-                if ((float)$r['jumlah_k'] - (float)$r['r'] > 0) {
+                // Cari total yang sudah diretur dari invoice ini sebelumnya
+                $ket_ret = "Retur Penjualan Inv: " . $search_inv;
+                $stmt_ret = $conn->prepare("SELECT SUM(jumlah_m) AS tot_retur FROM stock WHERE sj = ? AND kodeb = ?");
+                $stmt_ret->bind_param("ss", $ket_ret, $r['kodeb']);
+                $stmt_ret->execute();
+                $row_ret = $stmt_ret->get_result()->fetch_assoc();
+                $sudah_retur = (float)$row_ret['tot_retur'];
+                $stmt_ret->close();
+                
+                $sisa_bisa_retur = (float)$r['jumlah_k'] - $sudah_retur;
+                
+                // Hanya tampilkan jika masih ada sisa yang bisa diretur
+                if ($sisa_bisa_retur > 0) {
+                    $r['sisa_bisa_retur'] = $sisa_bisa_retur;
                     $items[] = $r;
                 }
             }
@@ -331,16 +353,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
                     <th>Nama Barang</th>
                     <th>Harga Satuan (DPP)</th>
                     <th>PPN Satuan</th>
-                    <th>Qty Beli</th>
-                    <th>Max Retur</th>
+                    <th>Qty Jual</th>
+                    <th>Sudah Retur</th>
+                    <th>Max Bisa Retur</th>
                     <th style="width: 120px;">Qty Retur</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($items as $item): 
                     $qty = (float)$item['jumlah_k'];
-                    $r_sebelum = (float)$item['r'];
-                    $max_retur = $qty - $r_sebelum;
+                    $sisa_bisa_retur = (float)$item['sisa_bisa_retur'];
+                    $sudah_retur = $qty - $sisa_bisa_retur;
                     
                     $harga_sat = $qty > 0 ? (float)$item['harga_k'] / $qty : 0;
                     $ppn_sat = $qty > 0 ? (float)$item['ppn_k'] / $qty : 0;
@@ -348,16 +371,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
                 <tr>
                     <td>
                         <?= htmlspecialchars($item['kodeb']) ?>
-                        <input type="hidden" name="stock_ids[]" value="<?= $item['ids'] ?>">
                         <input type="hidden" name="kode_b[]" value="<?= htmlspecialchars($item['kodeb']) ?>">
+                        <input type="hidden" name="stock_ids[]" value="<?= $item['ids'] ?>">
                     </td>
                     <td><?= htmlspecialchars($item['nama']) ?></td>
-                    <td><?= number_format($harga_sat, 2) ?></td>
-                    <td><?= number_format($ppn_sat, 2) ?></td>
-                    <td><?= $qty ?></td>
-                    <td><strong style="color:#d32f2f;"><?= $max_retur ?></strong></td>
+                    <td><?= number_format($harga_sat, 2, ',', '.') ?></td>
+                    <td><?= number_format($ppn_sat, 2, ',', '.') ?></td>
+                    <td><?= number_format($qty, 2, ',', '.') ?></td>
+                    <td><?= number_format($sudah_retur, 2, ',', '.') ?></td>
+                    <td><?= number_format($sisa_bisa_retur, 2, ',', '.') ?></td>
                     <td>
-                        <input type="number" name="qty_retur[]" min="0" max="<?= $max_retur ?>" step="0.01" value="0" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; text-align:center;">
+                        <input type="number" name="qty_retur[]" min="0" max="<?= $sisa_bisa_retur ?>" step="0.01" value="0" style="width: 80px; padding:8px; border:1px solid #ccc; border-radius:4px; text-align:center;">
                     </td>
                 </tr>
                 <?php endforeach; ?>
