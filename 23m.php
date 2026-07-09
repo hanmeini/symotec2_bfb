@@ -65,13 +65,13 @@ $sql_pph23 = "
         (
             SELECT SUM(jurnal.debet)
             FROM jurnal
-            WHERE jurnal.journal_number = beli.inv
+            WHERE jurnal.journal_number COLLATE utf8mb4_unicode_ci = beli.inv COLLATE utf8mb4_unicode_ci
               AND jurnal.coa = '13103'
         ) AS PPN,
         (
             SELECT SUM(jurnal.debet)
             FROM jurnal
-            WHERE jurnal.journal_number = beli.inv
+            WHERE jurnal.journal_number COLLATE utf8mb4_unicode_ci = beli.inv COLLATE utf8mb4_unicode_ci
               AND jurnal.coa LIKE '51%'
         ) AS DPP
     FROM 

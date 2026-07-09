@@ -73,9 +73,9 @@ DATE(tr.tanggal),
 COALESCE(ga.nama_gudang,'-'),
 COALESCE(gt.nama_gudang,'-')
 
-FROM transaksi t1
+FROM transaksiho1 t1
 
-LEFT JOIN transaksi t2
+LEFT JOIN transaksiho1 t2
 ON t2.sj=t1.sj
 AND t2.jumlah_m>0
 
