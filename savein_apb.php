@@ -22,20 +22,9 @@ try {
     $totalSisa = (float)$_POST['totalSisa'];
     $inv = $_POST['inv'] ?? '';
 
-    // ================= NOMOR COS =================
-    $result = $conn->query("SELECT MAX(id) AS max_nomor FROM bos FOR UPDATE");
-    $max_nomor = ($result && $result->num_rows > 0)
-        ? intval($result->fetch_assoc()['max_nomor'])
-        : 0;
-
-    $nomor_formatted = sprintf('%04d', $max_nomor + 1);
-    $tahun = date('Y', strtotime($tanggal));
-    $kode = "BOS".$tahun.$nomor_formatted;
-
-    $stmtCos = $conn->prepare("INSERT INTO bos (bos) VALUES (?)");
-    $stmtCos->bind_param("s",$kode);
-    $stmtCos->execute();
-    $stmtCos->close();
+    // ================= NOMOR AP =================
+    require_once 'generate_nomor_ap.php';
+    $kode = generateNomorAP($conn, 'BOS', $tanggal);
 
     // ================= AMBIL pembelianho1 =================
     $stmtPembelian = $conn->prepare("

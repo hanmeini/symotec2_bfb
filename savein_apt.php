@@ -88,16 +88,9 @@ $pph23 = (float)$p['pph23m'];
 $sisaBaru = $sisa_old - $hutang;
 if($sisaBaru < 0) $sisaBaru = 0;
 
-/* ================= NOMOR PV ================= */
-$res = $conn->query("SELECT MAX(id) AS max_id FROM pv FOR UPDATE");
-$row = $res->fetch_assoc();
-
-$no = $row['max_id'] ? $row['max_id'] + 1 : 1;
-$kode = "PV".date('Y').sprintf('%04d',$no);
-
-$stmtPV = $conn->prepare("INSERT INTO pv (pv) VALUES (?)");
-$stmtPV->bind_param("s",$kode);
-$stmtPV->execute();
+/* ================= NOMOR AP ================= */
+require_once 'generate_nomor_ap.php';
+$kode = generateNomorAP($conn, 'PV', $tanggal);
 
 /* ================= PREPARE ================= */
 $stmtJ = $conn->prepare("

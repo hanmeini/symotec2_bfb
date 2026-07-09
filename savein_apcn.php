@@ -135,32 +135,9 @@ if($sisaBaru < 0){
     $sisaBaru = 0;
 }
 
-/* ================= NOMOR PV ================= */
-
-$res = $conn->query("
-SELECT MAX(id) AS max_id
-FROM pv
-FOR UPDATE
-");
-
-$dPV = $res->fetch_assoc();
-
-$urut = $dPV['max_id']
-    ? $dPV['max_id'] + 1
-    : 1;
-
-$kode = "PV".
-         date('Y').
-         sprintf('%04d',$urut);
-
-$stmtPV = $conn->prepare("
-INSERT INTO pv (pv)
-VALUES (?)
-");
-
-$stmtPV->bind_param("s",$kode);
-
-$stmtPV->execute();
+/* ================= NOMOR AP ================= */
+require_once 'generate_nomor_ap.php';
+$kode = generateNomorAP($conn, 'PV', $tanggal);
 
 /* ================= PREPARE JURNAL ================= */
 
