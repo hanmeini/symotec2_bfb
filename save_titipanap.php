@@ -34,15 +34,9 @@ try {
     }
 
     // ================= NOMOR TITIPAN =================
-   // ================= NOMOR COS =================
-    $result = $conn->query("SELECT MAX(id) AS max_nomor FROM cos FOR UPDATE");
-    $max_nomor = ($result && $result->num_rows > 0)
-        ? intval($result->fetch_assoc()['max_nomor'])
-        : 0;
-
-    $nomor_formatted = sprintf('%04d', $max_nomor + 1);
-    $tahun = date('Y', strtotime($tanggal));
-    $kode = "COS".$tahun.$nomor_formatted;
+   // ================= NOMOR AP =================
+require_once 'generate_nomor_ap.php';
+$kode = generateNomorAP($conn, 'COS', $tanggal);
 
     $stmtCos = $conn->prepare("INSERT INTO cos (cos) VALUES (?)");
     $stmtCos->bind_param("s",$kode);

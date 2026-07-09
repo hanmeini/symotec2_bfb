@@ -86,18 +86,8 @@ if (isset($_POST['proses_valid']) && isset($_POST['valid_json'])) {
     $valid_data = json_decode($_POST['valid_json'], true);
     $tahun = date('Y');
 
-    // --- Buat nomor jurnal baru
-    $query = "SELECT max(id) AS max_nomor FROM JM";
-    $result = $conn->query($query);
-    if ($result) {
-        $row = $result->fetch_assoc();
-        $max_nomor = $row['max_nomor'];
-        $nomor = $max_nomor ? intval($max_nomor) + 1 : 1;
-        $nomor_formatted = sprintf('%04d', $nomor);
-    } else {
-        $nomor_formatted = '0001';
-    }
-    $kode_transaksi = "JM" . $tahun . $nomor_formatted;
+    require_once 'generate_nomor_ap.php';
+    $kode_transaksi = generateNomorAP($conn, 'JM', date('Y-m-d'));
 
     // Simpan ke tabel JM
     $sql1 = "INSERT INTO JM (jurnal) VALUES (?)";

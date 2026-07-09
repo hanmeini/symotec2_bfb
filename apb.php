@@ -167,30 +167,8 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
             throw new Exception("Pembayaran melebihi sisa tagihan");
         }
 
-        /* =========================================================
-           NOMOR COS
-        ========================================================= */
-
-        $qCos = $conn->query("
-        SELECT MAX(id) AS max_id
-        FROM bos
-        FOR UPDATE
-        ");
-
-        $max_id = 0;
-
-        if($qCos && $qCos->num_rows>0){
-
-            $dCos = $qCos->fetch_assoc();
-
-            $max_id = (int)$dCos['max_id'];
-        }
-
-        $urut = $max_id + 1;
-
-        $tahun = date('Y',strtotime($tanggal));
-
-        $kodeCOS = "BOs".$tahun.sprintf('%04d',$urut);
+        require_once 'generate_nomor_ap.php';
+        $kodeCOS = generateNomorAP($conn, 'BOS', $tanggal);
 
         $stmtCos = $conn->prepare("
         INSERT INTO bos(bos)
