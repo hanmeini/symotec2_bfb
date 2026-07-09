@@ -85,7 +85,7 @@ ON ga.id_gudang=t1.id_gudang
 LEFT JOIN master_gudang gt
 ON gt.id_gudang=t2.id_gudang
 
-LEFT JOIN TERIMA tr
+LEFT JOIN terima tr
 ON tr.sj=t1.sj
 
 $where
