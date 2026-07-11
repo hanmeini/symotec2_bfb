@@ -93,4 +93,32 @@ function generateNomorDokumen($conn, $kode_dokumen) {
 
     return str_pad($nomorUrut, 4, '0', STR_PAD_LEFT) . '/' . strtoupper($kode_dokumen) . '/' . $romawi . '/' . $tahun;
 }
+
+// Fitur Konversi UOM (Unit of Measurement)
+function format_konversi($total_base_qty, $rasio_besar = 0, $rasio_tengah = 0) {
+    $qty_besar = 0;
+    $qty_tengah = 0;
+    $qty_kecil = $total_base_qty;
+
+    if ($rasio_besar > 0) {
+        $qty_besar = floor($qty_kecil / $rasio_besar);
+        $qty_kecil = $qty_kecil - ($qty_besar * $rasio_besar);
+    }
+    
+    if ($rasio_tengah > 0) {
+        $qty_tengah = floor($qty_kecil / $rasio_tengah);
+        $qty_kecil = $qty_kecil - ($qty_tengah * $rasio_tengah);
+    }
+
+    // Hanya tampilkan yang relevan, atau kembalikan 1.3.5 format
+    return "{$qty_besar}.{$qty_tengah}.{$qty_kecil}";
+}
+
+function parse_konversi($qty_besar, $qty_tengah, $qty_kecil, $rasio_besar = 0, $rasio_tengah = 0) {
+    $total = (float)$qty_kecil;
+    if ($rasio_besar > 0) $total += ((float)$qty_besar * (float)$rasio_besar);
+    if ($rasio_tengah > 0) $total += ((float)$qty_tengah * (float)$rasio_tengah);
+    return $total;
+}
+
 ?>
