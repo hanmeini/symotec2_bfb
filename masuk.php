@@ -314,6 +314,18 @@ function setsSupCode(kode, nama) {
 <br>
         <label for="rek">Nomor Surat Jalan:</label>
 <input type="text" id="sj" name="sj" required>
+        <br>
+        <button type="button" class="btn-green" onclick="openScanner()" title="Scan Barcode Kamera" style="margin-bottom:15px; padding:8px 16px; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid fa-barcode"></i> Scan Pakai Kamera
+        </button>
+
+        <!-- Area Scanner -->
+        <div id="scannerBox" style="display:none; text-align:center; margin-bottom:20px; background:#fff; padding:10px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1);">
+            <video id="preview" style="width:100%; max-width:320px; border:1px solid #ccc; border-radius:8px;"></video>
+            <br>
+            <button type="button" class="btn-green" style="margin-top:10px; background:#dc3545; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;" onclick="closeScanner()">Tutup Kamera</button>
+        </div>
+        
         <div id="itemContainer">
             <table>
                 <thead>
@@ -352,7 +364,65 @@ function setsSupCode(kode, nama) {
         <input type="submit" value="Simpan Transaksi">
     </form>
 </body>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
 <script>
+    let codeReader;
+    let scanned = false;
+
+    function openScanner() {
+        document.getElementById('scannerBox').style.display = 'block';
+        if (!codeReader) {
+            codeReader = new ZXing.BrowserMultiFormatReader();
+        }
+        scanned = false;
+        codeReader.decodeFromVideoDevice(null, 'preview', (result, err) => {
+            if (result && !scanned) {
+                scanned = true;
+                const barcode = result.text;
+                fetch("get_item_barcode.php?kode=" + encodeURIComponent(barcode))
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        addItemByScan(data.kode_b, data.nama_b);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(err => alert("Gagal mengambil data: " + err));
+                closeScanner();
+            }
+        });
+    }
+
+    function closeScanner() {
+        if (codeReader) {
+            codeReader.reset();
+        }
+        document.getElementById('scannerBox').style.display = 'none';
+    }
+
+    function addItemByScan(kode, nama) {
+        // Cari baris kosong atau tambah baris baru
+        var rows = document.querySelectorAll('#itemContainer tbody tr.item');
+        var inserted = false;
+        for (var i = 0; i < rows.length; i++) {
+            var k = rows[i].querySelector('[name="kode_b[]"]');
+            var n = rows[i].querySelector('[name="nama_b[]"]');
+            var j = rows[i].querySelector('[name="jumlah_m[]"]');
+            if (k && k.value === '') {
+                k.value = kode;
+                n.value = nama;
+                j.value = 1;
+                inserted = true;
+                break;
+            }
+        }
+        if (!inserted) {
+            addItem();
+            setTimeout(() => addItemByScan(kode, nama), 100);
+        }
+    }
+
     document.addEventListener('contextmenu', function(e) {
         e.preventDefault();
     });

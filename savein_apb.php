@@ -8,10 +8,6 @@ if (!isset($_SESSION['username'])) {
 
 require_once 'config1.php';
 
-
-
-
-
 $conn->begin_transaction();
 
 try {
@@ -98,7 +94,7 @@ try {
 
         // ================= DETEKSI BIAYA BANK =================
         // hanya tagging, tidak ubah flow
-        if($coa == '82002'){
+        if($coa == '81101'){
             $keterangan = "Biaya Administrasi Bank";
         } else {
             $keterangan = "Pembayaran Hutang";
@@ -125,22 +121,22 @@ try {
     // ================= UPDATE pembelianho1 =================
     $stmt2 = $conn->prepare("
         UPDATE pembelianho1 
-        SET sisa=?, pph15m=?, pph22m=?, pph23m=? 
+        SET sisa=?, bayar = bayar + ?, pph15m=?, pph22m=?, pph23m=? 
         WHERE id_transaksi=?
     ");
 
-    $stmt2->bind_param("ddddi", $totalSisa, $pph15, $pph22, $pph23, $idbeli);
+    $stmt2->bind_param("dddddi", $totalSisa, $totalD, $pph15, $pph22, $pph23, $idbeli);
     $stmt2->execute();
     $stmt2->close();
 
     // ================= INSERT APBY =================
     $stmt3 = $conn->prepare("
-        INSERT INTO apby (tanggal, inv, sup, ket, bayar1) 
+        INSERT INTO apby (tanggal, inv, cust_id, kodebooking, bayar1) 
         VALUES (?, ?, ?, ?, ?)
     ");
 
-    // ✔ pakai kas keluar (SUDAH termasuk biaya bank)
-    $stmt3->bind_param("ssssd", $tanggal, $inv, $sup, $keterangan, $totalKasKeluar);
+    // $totalKasKeluar pakai kas keluar (SUDAH termasuk biaya bank)
+    $stmt3->bind_param("ssssd", $tanggal, $inv, $sup, $kode, $totalKasKeluar);
     $stmt3->execute();
 
     $conn->commit();

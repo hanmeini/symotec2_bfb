@@ -8,10 +8,6 @@ if (!isset($_SESSION['username'])) {
 
 require_once 'config1.php';
 
-
-
-
-
 $conn->begin_transaction();
 
 try {
@@ -120,11 +116,11 @@ try {
 
     // ================= INSERT APBY =================
     $stmt3 = $conn->prepare("
-        INSERT INTO apby (tanggal, inv, sup, ket, bayar1) 
+        INSERT INTO apby (tanggal, inv, cust_id, kodebooking, bayar1) 
         VALUES (?, ?, ?, ?, ?)
     ");
 
-    $stmt3->bind_param("ssssd", $tanggal, $inv, $sup, $keterangan, $totalD);
+    $stmt3->bind_param("ssssd", $tanggal, $inv, $sup, $kode, $totalD);
     $stmt3->execute();
 
     $conn->commit();

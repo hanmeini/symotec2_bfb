@@ -10,21 +10,17 @@ if (!isset($_SESSION['username'])) {
 
 require_once 'config1.php';
 
-
-
-
-
 $conn->begin_transaction();
 
 try {
 
 /* ================= INPUT ================= */
 $tanggal = date('Y-m-d H:i:s', strtotime($_POST['tanggal']));
-$idbeli  = (int)$_POST['idbeli'];
+$idbeli  = $_POST['idbeli'];
 $inv     = $_POST['inv'] ?? '';
 $idt     = $_POST['titipan_id'] ?? null;
 
-if($idbeli <= 0) throw new Exception("ID tidak valid");
+if(!$idbeli) throw new Exception("ID tidak valid");
 
 /* ================= NORMALISASI JURNAL ================= */
 $jurnal = [];
@@ -69,9 +65,9 @@ $hutang = $totalD;
 $stmtP = $conn->prepare("
 SELECT sup, sisa, pph15m, pph22m, pph23m
 FROM pembelianho1 
-WHERE id_transaksi=? FOR UPDATE
+WHERE j=? FOR UPDATE
 ");
-$stmtP->bind_param("i",$idbeli);
+$stmtP->bind_param("s",$idbeli);
 $stmtP->execute();
 $p = $stmtP->get_result()->fetch_assoc();
 
@@ -94,7 +90,7 @@ $kode = generateNomorAP($conn, 'PV', $tanggal);
 
 /* ================= PREPARE ================= */
 $stmtJ = $conn->prepare("
-INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit) VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO jurnal (journal_number, jurnal_sementara, tanggal, keterangan, coa, account_name, debet, kredit, kode_booking, supcust) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 
 $stmtCoa = $conn->prepare("SELECT account_name FROM coa WHERE account_code=? LIMIT 1");
@@ -128,7 +124,8 @@ foreach($jurnal as $r){
     if(strpos($coa,'21.04.02.001')===0) $pph23 += $kredit;
 
     $stmtJ->bind_param(
-        "ssssddsss",
+        "ssssssddss",
+        $kode,
         $kode,
         $tanggal,
         $ket,
@@ -136,7 +133,7 @@ foreach($jurnal as $r){
         $nama,
         $debet,
         $kredit,
-        $idbeli,
+        $inv,
         $sup
     );
 
@@ -146,20 +143,20 @@ foreach($jurnal as $r){
 /* ================= UPDATE pembelianho1 ================= */
 $stmtUp = $conn->prepare("
 UPDATE pembelianho1 
-SET sisa=?, pph15m=?, pph22m=?, pph23m=?
-WHERE id_transaksi=?
+SET sisa=?, bayar = bayar + ?, pph15m=?, pph22m=?, pph23m=?
+WHERE j=?
 ");
 
-$stmtUp->bind_param("ddddi",$sisaBaru,$pph15,$pph22,$pph23,$idbeli);
+$stmtUp->bind_param("ddddds",$sisaBaru,$hutang,$pph15,$pph22,$pph23,$idbeli);
 $stmtUp->execute();
 
 /* ================= INSERT APBY ================= */
 $stmtAp = $conn->prepare("
-INSERT INTO apby (tanggal, inv, sup, ket, bayar1) 
+INSERT INTO apby (tanggal, inv, cust_id, kodebooking, bayar1) 
 VALUES (?, ?, ?, ?, ?)
 ");
 
-$stmtAp->bind_param("ssssd",$tanggal,$inv,$sup,$ket,$totalD);
+$stmtAp->bind_param("ssssd",$tanggal,$inv,$sup,$kode,$totalD);
 $stmtAp->execute();
 
 /* ================= UPDATE TITIPAN ================= */
@@ -195,10 +192,10 @@ if($idt && $titipan_pakai > 0){
         $desc = "Sisa titipan dari ID ".$idt;
 
         $stmtNew = $conn->prepare("
-        INSERT INTO titipanap (tanggal, nominal, description, sup)
-        VALUES (?,?,?,?)
+        INSERT INTO titipanap (tanggal, nominal, description, sup, id_parent, created_at, updated_at)
+        VALUES (?,?,?,?,?, NOW(), NOW())
         ");
-        $stmtNew->bind_param("sdss",$tanggal,$sisaTitipan,$desc,$sup);
+        $stmtNew->bind_param("sdssi",$tanggal,$sisaTitipan,$desc,$sup,$idt);
         $stmtNew->execute();
     }
 }
@@ -208,7 +205,7 @@ $conn->commit();
 
 echo "<script>
 alert('Berhasil disimpan: $kode');
-window.location.href='cetak_jurnal.php?kode_transaksi=$kode';
+window.location.href='cetak_jurnal_sementara.php?kode_transaksi=$kode';
 </script>";
 
 }catch(Exception $e){

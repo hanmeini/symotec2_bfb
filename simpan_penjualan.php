@@ -29,6 +29,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ppn = $_POST['total_ppn'] ?? 0;
         $userinv = $_POST['username1'] ?? $_SESSION['username'] ?? 'system';
         
+        // --- FETCH COA USER ---
+        $coa_user = '11201'; // Default: Piutang Dagang
+        $stmt_coa = $conn->prepare("SELECT coa FROM me WHERE username = ?");
+        $stmt_coa->bind_param("s", $userinv);
+        $stmt_coa->execute();
+        $res_coa = $stmt_coa->get_result();
+        if ($row_coa = $res_coa->fetch_assoc()) {
+            if (!empty($row_coa['coa'])) {
+                $coa_user = $row_coa['coa'];
+            }
+        }
+        $stmt_coa->close();
+        
         $stmt = $conn->prepare("INSERT INTO penjualanHO1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $dpp, $ppn, $total_harga, $userinv, $po);
         $stmt->execute();
@@ -102,9 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $stmt_jurnal = $conn->prepare("INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit, kode_booking) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-        // 1. Debet: 11201 Piutang Dagang
+        // 1. Debet: Piutang Dagang (Sesuai COA Sales)
         $d = $total_harga; $k = 0;
-        $coa = '11201';
+        $coa = $coa_user;
         $stmt_jurnal->bind_param("ssssdds", $nomor, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor);
         $stmt_jurnal->execute();
 

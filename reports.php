@@ -175,25 +175,22 @@ if ($is_sales) {
 
 $sql = "
     SELECT
-        tanggal_transaksi,
-        J,
-        cust,
-        diskon,
-        harga,
-        ppn,
-        jumlah,
-        '' as bank,
-        0 as bayar,
-        jumlah as sisa,
-        '' as fp_k,
-        userinv,
-        '' as userbayar,
-        IF(userinv IN ('admin', 'HO', 'HO1'), 'Pusat', UPPER(userinv)) as cabang
+        p.tanggal_transaksi,
+        p.J,
+        IFNULL(c.nama, p.cust) as cust,
+        p.jumlah,
+        p.bank,
+        p.bayar,
+        p.sisa,
+        p.userinv,
+        p.userbayar,
+        IF(p.userinv IN ('admin', 'HO', 'HO1'), 'Pusat', UPPER(p.userinv)) as cabang
     FROM 
-        penjualanHO1
+        penjualanHO1 p
+    LEFT JOIN cust c ON p.cust = c.kode
     WHERE 
-        DATE(tanggal_transaksi) BETWEEN ? AND ?$sales_filter
-    ORDER BY tanggal_transaksi";
+        DATE(p.tanggal_transaksi) BETWEEN ? AND ?$sales_filter
+    ORDER BY p.tanggal_transaksi";
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("ss", $start_date, $end_date);
@@ -202,14 +199,10 @@ $stmt->bind_result(
     $tanggal_transaksi,
     $J,
     $cust,
-    $diskon,
-    $harga,
-    $ppn,
     $jumlah,
     $bank,
     $bayar,
     $sisa,
-    $fp_k,
     $userinv,
     $userbayar,
     $cabang
@@ -225,22 +218,15 @@ echo "<table border='1' cellpadding='5' cellspacing='0'>
         <tr>
             <th>Tanggal</th>
             <th>No Inv</th>
-            <th>Kode Cust</th>
-            <th>Diskon</th>
-            <th>DPP</th>
-            <th>PPN</th>
-            <th>Jumlah</th>
+            <th>Nama Customer</th>
+            <th>Total Tagihan (Jumlah)</th>
             <th>Pelunasan</th>
             <th>Sisa</th>
-            <th>Bank</th>
-            <th>No FP</th>
+            <th>Bank / Pembayaran</th>
             <th>Cabang</th>
         </tr>";
 
 while ($stmt->fetch()) {
-    $total_diskon += $diskon;
-    $total_harga += $harga;
-    $total_ppn += $ppn;
     $total_jumlah += $jumlah;
     $total_bayar += $bayar;
     $total_sisa += $sisa;
@@ -248,81 +234,63 @@ while ($stmt->fetch()) {
     if (!isset($summary[$cabang])) {
         $summary[$cabang] = [
             'row_count' => 0,
-            'total_dpp' => 0,
-            'total_ppn' => 0,
             'total_jumlah' => 0,
             'total_bayar' => 0,
-            'total_sisa' => 0,
-            'total_fp1' => 0,
-            'total_fp_lain' => 0
+            'total_sisa' => 0
         ];
     }
 
     $summary[$cabang]['row_count']++;
-    $summary[$cabang]['total_dpp'] += $harga;
-    $summary[$cabang]['total_ppn'] += $ppn;
     $summary[$cabang]['total_jumlah'] += $jumlah;
     $summary[$cabang]['total_bayar'] += $bayar;
     $summary[$cabang]['total_sisa'] += $sisa;
 
-    if ($fp_k == '1') {
-        $summary[$cabang]['total_fp1'] += $jumlah;
-    } else {
-        $summary[$cabang]['total_fp_lain'] += $jumlah;
+    // Hitung per bank
+    if (!empty($bank)) {
+        if (!isset($summary_bank[$bank])) {
+            $summary_bank[$bank] = 0;
+        }
+        $summary_bank[$bank] += $bayar;
     }
 
     echo "<tr>
             <td>" . htmlspecialchars($tanggal_transaksi) . "</td>
             <td>" . htmlspecialchars($J) . "<br>" . htmlspecialchars($userinv) . "</td>
             <td>" . htmlspecialchars($cust) . "</td>
-            <td>" . number_format($diskon, 2) . "</td>
-            <td>" . number_format($harga, 2) . "</td>
-            <td>" . number_format($ppn, 2) . "</td>
             <td>" . number_format($jumlah, 2) . "</td>
             <td>" . number_format($bayar, 2) . "</td>
             <td>" . number_format($sisa, 2) . "</td>
             <td>" . htmlspecialchars($bank) . "<br>" . htmlspecialchars($userbayar) . "</td>
-            <td>" . htmlspecialchars($fp_k) . "</td>
             <td>" . htmlspecialchars($cabang) . "</td>
         </tr>";
 }
 echo "</table>";
 
+$summary_bank = [];
+// Hitung summary_bank dari data sudah ter-fetch
 // Summary per cabang
 echo "<h2>Summary Per Cabang</h2><table border='1' cellpadding='5' cellspacing='0'>
         <tr>
             <th>Cabang</th>
             <th>Total Nota</th>
-            <th>Total DPP</th>
-            <th>Total PPN</th>
             <th>Total Jumlah</th>
-            <th>Digunggung</th>
-            <th>Faktur Pajak</th>
             <th>Total Pelunasan</th>
             <th>Total Sisa</th>
         </tr>";
 
-$total_nota_all = $total_dpp_all = $total_ppn_all = $total_jumlah_all = $total_fp1_all = $total_fp_lain_all = $total_bayar_all = $total_sisa_all = 0;
+$total_nota_all = $total_jumlah_all = $total_bayar_all = $total_sisa_all = 0;
 
 foreach ($summary as $cabang => $data) {
     echo "<tr>
             <td>" . htmlspecialchars($cabang) . "</td>
             <td>" . $data['row_count'] . "</td>
-            <td>" . number_format($data['total_dpp'], 2) . "</td>
-            <td>" . number_format($data['total_ppn'], 2) . "</td>
             <td>" . number_format($data['total_jumlah'], 2) . "</td>
-            <td>" . number_format($data['total_fp1'], 2) . "</td>
-            <td>" . number_format($data['total_fp_lain'], 2) . "</td>
             <td>" . number_format($data['total_bayar'], 2) . "</td>
             <td>" . number_format($data['total_sisa'], 2) . "</td>
         </tr>";
 
     $total_nota_all += $data['row_count'];
-    $total_dpp_all += $data['total_dpp'];
-    $total_ppn_all += $data['total_ppn'];
     $total_jumlah_all += $data['total_jumlah'];
-    $total_fp1_all += $data['total_fp1'];
-    $total_fp_lain_all += $data['total_fp_lain'];
     $total_bayar_all += $data['total_bayar'];
     $total_sisa_all += $data['total_sisa'];
 }
@@ -331,11 +299,7 @@ foreach ($summary as $cabang => $data) {
 echo "<tr style='font-weight:bold; background-color:#eee;'>
         <td>TOTAL</td>
         <td>$total_nota_all</td>
-        <td>" . number_format($total_dpp_all, 2) . "</td>
-        <td>" . number_format($total_ppn_all, 2) . "</td>
         <td>" . number_format($total_jumlah_all, 2) . "</td>
-        <td>" . number_format($total_fp1_all, 2) . "</td>
-        <td>" . number_format($total_fp_lain_all, 2) . "</td>
         <td>" . number_format($total_bayar_all, 2) . "</td>
         <td>" . number_format($total_sisa_all, 2) . "</td>
     </tr>";

@@ -54,7 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
             
             date_default_timezone_set('Asia/Jakarta');
             $tgl = date('Y-m-d H:i:s');
-            $kode_booking_titipan = "RETPEM-" . str_replace('/', '', $actual_j) . "-" . time();
+            require_once 'functions.php';
+            $kode_booking_titipan = generateNomorDokumen($conn, 'RTPB');
             $j_retur = $kode_booking_titipan;
             
             foreach ($kode_b_arr as $i => $kb) {

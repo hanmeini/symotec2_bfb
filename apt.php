@@ -447,15 +447,15 @@ id="titipan_jurnal">
 <td>2</td>
 
 <td>
-<?= htmlspecialchars($coa_hutang) ?>
+<?= htmlspecialchars($coa_hutang ?? '') ?>
 
 <input
 type="hidden"
 name="jurnal[1][coa]"
-value="<?= htmlspecialchars($coa_hutang) ?>">
+value="<?= htmlspecialchars($coa_hutang ?? '') ?>">
 </td>
 
-<td><?= htmlspecialchars($nama_akun) ?></td>
+<td><?= htmlspecialchars($nama_akun ?? '') ?></td>
 
 <td>
 

@@ -425,16 +425,16 @@ function hitungDariHargaJual(el) {
         return;
     }
 
-    // PPN is hardcoded 11% in the boss's reverse calculation
-    const dpp_per_item = hargajual / 1.11;
-    const ppn_per_item = hargajual - dpp_per_item;
+    // PPN ditiadakan sesuai instruksi (tidak ada kalkulasi mundur)
+    const dpp_per_item = hargajual;
+    const ppn_per_item = 0;
 
     const totalDPP = dpp_per_item * qty;
     const totalPPN = ppn_per_item * qty;
     const grandTotal = hargajual * qty;
 
     item.querySelector('[name="harga_k1[]"]').value = hargajual.toFixed(2);
-    item.querySelector('[name="harga_k2[]"]').value = totalDPP.toFixed(2);
+    item.querySelector('[name="harga_k2[]"]').value = dpp_per_item.toFixed(2);
     item.querySelector('[name="ppn_k[]"]').value = totalPPN.toFixed(2);
     item.querySelector('[name="hargat_k[]"]').value = grandTotal.toFixed(2);
 
@@ -468,7 +468,7 @@ function updateTotals(){
             parseFloat(item.querySelector('[name="harga_k2[]"]').value) || 0;
 
         totalPPN += ppn_k * qty;
-        totalHarga += dpp_item; 
+        totalHarga += dpp_item * qty; 
     });
 
     const totalSetelahDiskon =
@@ -483,7 +483,7 @@ function updateTotals(){
     document.querySelector('.total-container').innerHTML = `
         <p>Total Dasar (DPP): ${formatRibuan(totalHarga)}</p>
         <p>PPN: ${formatRibuan(totalPPN)}</p>
-        <p>Diskon: ${formatRibuan(totalDiskon)}</p>
+        
         <p style="font-size: 1.2em; font-weight: bold; color: #d9534f;">Grand Total Dibayar: ${formatRibuan(totalHargaTermasukPPN)}</p>
     `;
 
