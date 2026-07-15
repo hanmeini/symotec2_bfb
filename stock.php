@@ -1,5 +1,6 @@
 <?php
 require_once 'config1.php';
+require_once 'functions.php';
 
 $id_gudang = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -52,10 +53,11 @@ if ($id_gudang == 0) {
                    SUM(s.jumlah_m) AS total_masuk, 
                    SUM(s.jumlah_k) AS total_keluar, 
                    (SUM(s.jumlah_m) - SUM(s.jumlah_k)) AS stok_akhir,
-                   b.hargat_b AS harga_modal
+                   b.hargat_b AS harga_modal,
+                   b.rasio_besar, b.rasio_tengah
             FROM stock s
             LEFT JOIN b ON TRIM(s.kodeb) = TRIM(b.kode_b)
-            GROUP BY s.kodeb, b.nama_b, s.id_gudang, b.hargat_b
+            GROUP BY s.kodeb, b.nama_b, s.id_gudang, b.hargat_b, b.rasio_besar, b.rasio_tengah
             LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $limit, $offset);
@@ -78,11 +80,12 @@ if ($id_gudang == 0) {
                    SUM(s.jumlah_m) AS total_masuk, 
                    SUM(s.jumlah_k) AS total_keluar, 
                    (SUM(s.jumlah_m) - SUM(s.jumlah_k)) AS stok_akhir,
-                   b.hargat_b AS harga_modal
+                   b.hargat_b AS harga_modal,
+                   b.rasio_besar, b.rasio_tengah
             FROM stock s
             LEFT JOIN b ON TRIM(s.kodeb) = TRIM(b.kode_b)
             WHERE s.id_gudang = ?
-            GROUP BY s.kodeb, b.nama_b, b.hargat_b
+            GROUP BY s.kodeb, b.nama_b, b.hargat_b, b.rasio_besar, b.rasio_tengah
             LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("iii", $id_gudang, $limit, $offset);
@@ -173,12 +176,18 @@ $back_url = ($id_gudang > 0) ? "gudang/home.php?id=" . $id_gudang : "home.php";
         while ($row = $result->fetch_assoc()) {
             $stok = (float)$row["stok_akhir"];
             $neg = $stok < 0 ? 'negative' : '';
+            
+            $format_satuan = "";
+            if (!empty($row['rasio_besar']) || !empty($row['rasio_tengah'])) {
+                $format_satuan = "<br><small style='color: #6c757d; font-weight: bold;'>" . format_konversi($stok, (float)$row['rasio_besar'], (float)$row['rasio_tengah']) . "</small>";
+            }
+
             echo "<tr>";
             echo "<td>" . htmlspecialchars($row["kode_b"] ?? '') . "</td>";
             echo "<td>" . htmlspecialchars($row["nama_b"] ?? '') . "</td>";
             echo "<td>" . number_format((float)$row["total_masuk"]) . "</td>";
             echo "<td>" . number_format((float)$row["total_keluar"]) . "</td>";
-            echo "<td class='$neg'>" . number_format($stok) . "</td>";
+            echo "<td class='$neg'>" . number_format($stok) . $format_satuan . "</td>";
             echo "<td>" . number_format((float)$row["harga_modal"]) . "</td>";
             
             if ($id_gudang == 0) {
