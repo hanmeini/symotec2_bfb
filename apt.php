@@ -381,11 +381,11 @@ required>
 
 <option
 value="<?= $t['id'] ?>"
-data-nom="<?= $t['nominal'] ?>">
+data-nom="<?= $t['sisa'] ?>">
 
-<?= htmlspecialchars($t['description']) ?>
+<?= htmlspecialchars($t['keterangan']) ?>
 |
-<?= number_format($t['nominal'],2) ?>
+<?= number_format($t['sisa'],2) ?>
 
 </option>
 

@@ -265,6 +265,10 @@ input {
             xhr.send();
         }
 
+        function formatRibuan(angka) {
+            return parseFloat(angka).toLocaleString('id-ID');
+        }
+
         function calculatePPN(el) {
             var item = el.closest('.item');
             var harga_k = parseFloat(item.querySelector('[name="harga_k[]"]').value) || 0;

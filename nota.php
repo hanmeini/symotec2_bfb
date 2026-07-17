@@ -351,10 +351,7 @@ function openPopup(url) {
         <p>pembeli: <?php echo htmlspecialchars($penjualan_data['cust'] ?? '-'); ?></p>
         <p>Tanggal: <?php echo isset($tanggal_transaksi) ? htmlspecialchars($tanggal_transaksi) : date('Y-m-d'); ?></p>
         
-        <h4>Barang yang sudah dibeli tidak bisa dikembalikan</h4>
-        <h4>Menerima pemesanan buket dan pembungkusan kado</h4>
         <h4>Terimakasih telah berbelanja di toko kami</h4>
-        <h4>"Jazakumullah Khoir"</h4>
 
 
 <br>

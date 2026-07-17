@@ -209,8 +209,11 @@ require_once 'config1.php';
                     </select>
                 </div>
 
-                <label for="harga">Harga Jual:</label>
+                <label for="harga">Harga Jual (Normal):</label>
                 <input type="number" id="harga" name="harga" step="0.01" required>
+
+                <label for="harga_retail">Harga Retail:</label>
+                <input type="number" id="harga_retail" name="harga_retail" step="0.01" required>
 
                 <div>
                     <label for="ppn_jual_type">Pajak Jual (PPN):</label>

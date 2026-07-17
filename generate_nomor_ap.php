@@ -16,7 +16,7 @@ function generateNomorAP($conn, $tipe_dokumen, $tanggal = null) {
     $romawi = $bulan_romawi[$bulan_int];
 
     // Ambil nomor terakhir untuk tipe, tahun, dan bulan ini
-    $sql_cek = "SELECT nomor_terakhir FROM master_nomor_dokumen WHERE tipe_dokumen = ? AND tahun = ? AND bulan = ? FOR UPDATE";
+    $sql_cek = "SELECT nomor_terakhir FROM master_nomor_dokumen WHERE kode_dokumen = ? AND tahun = ? AND bulan = ? FOR UPDATE";
     $stmt_cek = $conn->prepare($sql_cek);
     $stmt_cek->bind_param("sss", $tipe_dokumen, $tahun, $bulan);
     $stmt_cek->execute();
@@ -26,14 +26,14 @@ function generateNomorAP($conn, $tipe_dokumen, $tanggal = null) {
         $row = $result->fetch_assoc();
         $nomor_baru = $row['nomor_terakhir'] + 1;
         
-        $sql_update = "UPDATE master_nomor_dokumen SET nomor_terakhir = ? WHERE tipe_dokumen = ? AND tahun = ? AND bulan = ?";
+        $sql_update = "UPDATE master_nomor_dokumen SET nomor_terakhir = ? WHERE kode_dokumen = ? AND tahun = ? AND bulan = ?";
         $stmt_update = $conn->prepare($sql_update);
         $stmt_update->bind_param("isss", $nomor_baru, $tipe_dokumen, $tahun, $bulan);
         $stmt_update->execute();
         $stmt_update->close();
     } else {
         $nomor_baru = 1;
-        $sql_insert = "INSERT INTO master_nomor_dokumen (tipe_dokumen, tahun, bulan, nomor_terakhir) VALUES (?, ?, ?, ?)";
+        $sql_insert = "INSERT INTO master_nomor_dokumen (kode_dokumen, tahun, bulan, nomor_terakhir) VALUES (?, ?, ?, ?)";
         $stmt_insert = $conn->prepare($sql_insert);
         $stmt_insert->bind_param("sssi", $tipe_dokumen, $tahun, $bulan, $nomor_baru);
         $stmt_insert->execute();

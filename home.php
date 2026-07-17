@@ -648,16 +648,31 @@ $menus = $filtered_menus;
 
                         <div class="icon">
 
-                            <?php if ($m['badge1'] !== "" || $m['badge2'] !== ""): ?>
+                            <?php 
+                            // Hitung dynamic badge untuk Verifikasi Order dan RPC
+                            $dynamic_badge = "";
+                            $menu_name = trim($m['nama_menu']);
+                            if ($menu_name === 'Verifikasi Order') {
+                                $stmt_badge = $pdo->query("SELECT COUNT(*) FROM penjualanHO1 WHERE J LIKE '%ORD%' AND (inv IS NULL OR inv = '')");
+                                $count = $stmt_badge->fetchColumn();
+                                if ($count > 0) $dynamic_badge = $count;
+                            } elseif ($menu_name === 'Rekap SJ (RPC)') {
+                                $stmt_badge = $pdo->query("SELECT COUNT(*) FROM penjualanHO1 WHERE inv LIKE '%SJ%' AND (no_rpc IS NULL OR no_rpc = '')");
+                                $count = $stmt_badge->fetchColumn();
+                                if ($count > 0) $dynamic_badge = $count;
+                            }
+                            ?>
+                            <?php if ($m['badge1'] !== "" || $m['badge2'] !== "" || $dynamic_badge !== ""): ?>
                                 <div class="badge-overlay">
-                                    <?php if (!empty($m['badge1'])): ?>
+                                    <?php if (!empty($dynamic_badge)): ?>
+                                        <span class="badge-red"><?= htmlspecialchars($dynamic_badge) ?></span>
+                                    <?php elseif (!empty($m['badge1'])): ?>
                                         <span class="badge-red"><?= htmlspecialchars($m['badge1']) ?></span>
                                     <?php endif; ?>
                                     <?php if (!empty($m['badge2'])): ?>
                                         <span class="badge-yellow"><?= htmlspecialchars($m['badge2']) ?></span>
                                     <?php endif; ?>
                                 </div>
-
                             <?php endif; ?>
 
                             <a href="<?= htmlspecialchars($m['file_menu']) ?>" style="text-decoration:none;">

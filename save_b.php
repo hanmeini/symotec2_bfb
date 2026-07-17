@@ -9,6 +9,7 @@ $brand = $_POST['brand'];
 $dpp = (float)$_POST['dpp'];
 $ppn_beli_type = (int)$_POST['ppn_beli_type'];
 $harga_jual_total = (float)$_POST['harga'];
+$harga_retail = (float)($_POST['harga_retail'] ?? 0);
 $ppn_jual_type = (int)$_POST['ppn_jual_type'];
 
 // Hitung PPN & DPP Jual
@@ -32,8 +33,8 @@ if ($ppn_beli_type === 11) {
 $hargat_m = $dpp;
 
 // Persiapkan query untuk menyimpan data
-$stmt = $conn->prepare("INSERT INTO b (kode_b, nama_b, jenis, brand, harga_b, ppn_b, hargat_b, dpp, harga_m, ppn_m, hargat_m) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->bind_param("ssssddddddd", $kode_b, $nama_b, $jenis, $brand, $harga_b, $ppn_b, $hargat_b, $dpp, $harga_m, $ppn_m, $hargat_m);
+$stmt = $conn->prepare("INSERT INTO b (kode_b, nama_b, jenis, brand, harga_b, ppn_b, hargat_b, dpp, harga_m, ppn_m, hargat_m, harga_retail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->bind_param("ssssdddddddd", $kode_b, $nama_b, $jenis, $brand, $harga_b, $ppn_b, $hargat_b, $dpp, $harga_m, $ppn_m, $hargat_m, $harga_retail);
 
 // Eksekusi query
 if ($stmt->execute()) {

@@ -32,7 +32,7 @@ $sup = $conn->query("SELECT kode,nama FROM sup ORDER BY nama");
 $bank = $conn->query("
     SELECT account_code,account_name 
     FROM coa 
-    WHERE layer=4 AND account_code = '11101'
+    WHERE layer=4 AND parent_account = '111'
 ");
 ?>
 

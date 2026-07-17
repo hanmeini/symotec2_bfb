@@ -140,13 +140,13 @@ $locationResult = $conn->query($locationQuery);
                             <?php foreach ($data as $row) { ?>
                                 <tr>
                                     <td><input type="checkbox" name="selected_ids[]" value="<?= htmlspecialchars($row['id']); ?>"></td>
-                                    <td><?= htmlspecialchars($row['id']); ?></td>
-                                    <td><?= htmlspecialchars($row['journal_number']); ?></td>
-                                    <td><?= htmlspecialchars($row['tanggal']); ?></td>
-                                    <td><?= htmlspecialchars($row['keterangan']); ?></td>
-                                    <td><?= htmlspecialchars($row['nama_cabang'] ?: ''); ?></td>
-                                    <td><?= htmlspecialchars($row['coa']); ?></td>
-                                    <td><?= htmlspecialchars($row['account_name']); ?></td>
+                                    <td><?= htmlspecialchars($row['id'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['journal_number'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['tanggal'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['keterangan'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['nama_cabang'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['coa'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['account_name'] ?? ''); ?></td>
                                     <td style="text-align:right;"><?= number_format($row['debet'], 2); ?></td>
                                     <td style="text-align:right;"><?= number_format($row['kredit'], 2); ?></td>
                                     <td>

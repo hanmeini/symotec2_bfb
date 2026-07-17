@@ -264,15 +264,11 @@ foreach ($rows as $row): ?>
   <td class="row-total"><?php echo htmlspecialchars($row['hargat_m']); ?></td>
 </tr>
 <?php endforeach; ?>
+<tr>
+  <td colspan="7" style="text-align:right; font-weight:bold;">Grand Total:</td>
+  <td style="font-weight:bold;"><span id="grandTotalText">0.00</span></td>
+</tr>
 </table>
-<br>
-<div style="background:#fff; padding:15px; border:1px solid #ccc; width: 400px;">
-    <label style="display:inline-block; width:150px; font-weight:bold;">Grand Total:</label> 
-    <span id="grandTotalText" style="font-weight:bold; font-size: 16px;">0.00</span><br><br>
-    
-    <label style="display:inline-block; width:150px; font-weight:bold;">Total Pembayaran:</label> 
-    <input type="text" name="bayar" id="bayarInput" value="<?php echo htmlspecialchars(str_replace(',', '.', $row['bayar_val'] ?? $bayar_val ?? '0')); ?>" style="width:200px; padding:5px;">
-</div>
 <br>
 <button type="submit" class="btn">Simpan</button>
 </form>

@@ -132,7 +132,10 @@ while ($stmt->fetch()) {
         <td>".number_format($bayar,2)."</td>
         <td>".number_format($sisa,2)."</td>
         <td>".htmlspecialchars($bank)."</td>
-        <td><a onclick=\"openPopup('nota.php?J=$J')\">Nota</a></td>
+        <td>
+            <a onclick=\"openPopup('cetak_sj.php?J=$J')\" style=\"cursor:pointer; color:blue; margin-right:10px;\">SJ</a>
+            <a onclick=\"openPopup('nota.php?J=$J')\" style=\"cursor:pointer; color:green;\">Nota</a>
+        </td>
     </tr>";
 }
 

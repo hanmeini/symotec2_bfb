@@ -48,7 +48,7 @@ $kode = generateNomorAP($conn, 'COS', $tanggal);
         SELECT account_name 
         FROM coa 
         WHERE account_code=? 
-        AND account_code = '11101'
+        AND parent_account = '111'
     ");
     $cek->bind_param("s",$bank);
     $cek->execute();

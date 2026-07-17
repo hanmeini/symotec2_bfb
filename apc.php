@@ -495,7 +495,7 @@ $coaKas = $conn->query("
         account_name
     FROM coa
     WHERE layer=4
-    AND account_code = '11101'
+    AND parent_account = '111'
     ORDER BY account_code
 ");
 ?>

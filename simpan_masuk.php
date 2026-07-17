@@ -87,8 +87,7 @@ try {
     $stmtTransaksi = $conn->prepare("INSERT INTO transaksiHO1 (tanggal_transaksi, J, kode_b, nama_b, jumlah_m, cus, user, sj, cabang, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     // 2. Insert ke stock (Ledger Inventori)
-    $jenis = ''; // Jenis dikosongkan sementara
-    $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, kodeb, jumlah_m, userid, sj, id_gudang) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, J, sup, kodeb, jumlah_m, userid, sj, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     
     foreach ($kode_b as $index => $kode_barang) {
         $nama_barang = $nama_b[$index];
@@ -112,8 +111,10 @@ try {
         }
 
         // Eksekusi Ledger Inventori (Stock)
-        $stmtStock->bind_param("ssdssi", 
+        $stmtStock->bind_param("ssssdssi", 
             $tanggal_transaksi, 
+            $Jb,
+            $sup,
             $kode_barang, 
             $qty_masuk,
             $userin,

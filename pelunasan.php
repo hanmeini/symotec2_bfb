@@ -121,21 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ===================================
         // JURNAL B: PELUNASAN KAS SALES
         // ===================================
-        $coa_kas_sales = '111105'; // default
-        $stmt_kas = $conn->prepare("
-            SELECT coa_kas FROM master_sales s 
-            JOIN me u ON s.userid = u.userid 
-            WHERE u.username = ? LIMIT 1
-        ");
-        $stmt_kas->bind_param("s", $userbayar_input);
-        $stmt_kas->execute();
-        $res_kas = $stmt_kas->get_result();
-        if($row_kas = $res_kas->fetch_assoc()){
-            if(!empty($row_kas['coa_kas'])) {
-                $coa_kas_sales = $row_kas['coa_kas'];
-            }
-        }
-        $stmt_kas->close();
+        $coa_kas_sales = $bank_input; // Gunakan COA dari input form secara langsung
 
         $ket_jurnal = "Pelunasan POS " . $j_value . " oleh " . $userbayar_input;
         $nomor_lunas = "LUNAS-" . $j_value . "-" . time(); // avoid duplicate if partial
@@ -234,7 +220,7 @@ $conn->close();
     </a>
     <form method="POST" action="">
         <label for="tanggal">Tanggal Pembayaran:</label>
-        <input type="date" id="tanggal" name="tanggal" required>
+        <input type="date" id="tanggal" name="tanggal" value="<?php echo date('Y-m-d'); ?>" required>
 
         <label for="j_value">No. Transaksi:</label>
         <input type="text" id="j_value" name="j_value" value="<?php echo htmlspecialchars($j_value); ?>" readonly>
@@ -251,28 +237,23 @@ $conn->close();
 
 
         <label for="bank">Bank/Cash:</label>
-        <?php if ($is_sales): ?>
-            <input type="text" id="bank" name="bank" value="CASH" readonly style="background-color: #eee;">
-        <?php else: ?>
             <select id="bank" name="bank" required>
-                <option value="" disabled selected hidden>Pilih Bank/Cash</option>
-                <option value="CASH">CASH</option>
+                <option value="" disabled selected hidden>Pilih Bank/Kas COA</option>
                 <?php
-                $conn = new mysqli($servername, $db_username, $db_password, $database);
-                $sql = "SELECT id_bank AS id, n_bank AS bank FROM bank";
-                $result = $conn->query($sql);
+                $conn_coa = new mysqli($servername, $db_username, $db_password, $database);
+                $sql = "SELECT account_code as coa, account_name FROM coa WHERE parent_account = '111'";
+                $result = $conn_coa->query($sql);
 
-                if ($result->num_rows > 0) {
+                if ($result && $result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
-                        echo "<option value='" . $row['bank'] . "'>" . htmlspecialchars($row['bank']) . "</option>";
+                        echo "<option value='" . $row['coa'] . "'>" . htmlspecialchars($row['coa'] . " - " . $row['account_name']) . "</option>";
                     }
                 } else {
-                    echo "<option value=''>Tidak ada data bank tersedia</option>";
+                    echo "<option value='' disabled>Data Kas/Bank (111) kosong di tabel COA</option>";
                 }
-                $conn->close();
+                $conn_coa->close();
                 ?>
             </select>
-        <?php endif; ?>
    <input type="hidden" name="userbayar" value="<?php echo htmlspecialchars($userbayar_input); ?>">
    <label for="uang">Uang Pembayaran:</label>
 <input type="number" id="uang" name="uang" step="0.01" 

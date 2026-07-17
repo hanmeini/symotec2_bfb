@@ -3,15 +3,21 @@
 
 function recalculate_stock_history($conn, $kodeb) {
     // Ambil semua histori stock untuk kodeb ini, urutkan berdasarkan tanggal dan ids
-    $stmt = $conn->prepare("SELECT ids, jumlah_m, harga_m, hargat_m, jumlah_k FROM stock WHERE kodeb = ? ORDER BY tanggal_transaksi ASC, ids ASC");
+    $stmt = $conn->prepare("SELECT s.ids, s.jumlah_m, s.harga_m, s.hargat_m, s.jumlah_k, s.sj, 
+                                   p.no_rpc 
+                            FROM stock s 
+                            LEFT JOIN penjualanHO1 p ON s.sj = p.inv 
+                            WHERE s.kodeb = ? 
+                            ORDER BY s.tanggal_transaksi ASC, s.ids ASC");
     $stmt->bind_param("s", $kodeb);
     $stmt->execute();
     $result = $stmt->get_result();
 
     $s_current = 0.0;
+    $sg_current = 0.0;
     $r_current = 0.0;
 
-    $update_stmt = $conn->prepare("UPDATE stock SET s = ?, r = ?, hpp = ? WHERE ids = ?");
+    $update_stmt = $conn->prepare("UPDATE stock SET s = ?, sg = ?, r = ?, hpp = ? WHERE ids = ?");
 
     while ($row = $result->fetch_assoc()) {
         $ids = $row['ids'];
@@ -25,6 +31,7 @@ function recalculate_stock_history($conn, $kodeb) {
         if ($jm > 0) {
             // Masuk
             $s_baru = $s_current + $jm;
+            $sg_baru = $sg_current + $jm; // Barang masuk langsung nambah di gudang
             if ($s_baru > 0) {
                 // Harga total pembelanjaan saat ini. Jika hargat_m 0, fallback ke jm * hm
                 $cost_current = ($htm > 0) ? $htm : ($jm * $hm);
@@ -33,20 +40,30 @@ function recalculate_stock_history($conn, $kodeb) {
                 $r_baru = $r_current;
             }
             $s_current = $s_baru;
+            $sg_current = $sg_baru;
             $r_current = $r_baru;
         }
 
         if ($jk > 0) {
             // Keluar
             $s_baru = $s_current - $jk;
+            
+            // Cek apakah barang sudah dicetak RPC-nya (keluar gudang)
+            if (!empty($row['no_rpc'])) {
+                $sg_baru = $sg_current - $jk;
+            } else {
+                $sg_baru = $sg_current; // Belum dicetak RPC, stok fisik gudang masih ada
+            }
+
             $hpp = $r_current; // HPP diambil dari harga rata-rata saat ini
             
             $s_current = $s_baru;
+            $sg_current = $sg_baru;
             // r_current tetap
         }
 
         // Update row
-        $update_stmt->bind_param("dddi", $s_current, $r_current, $hpp, $ids);
+        $update_stmt->bind_param("ddddi", $s_current, $sg_current, $r_current, $hpp, $ids);
         $update_stmt->execute();
     }
 

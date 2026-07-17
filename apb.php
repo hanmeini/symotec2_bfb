@@ -537,7 +537,7 @@ SELECT
     account_name
 FROM coa
 WHERE layer=4
-AND account_code IN ('11102','11103','11104')
+AND parent_account = '111'
 ORDER BY account_code
 ");
 ?>

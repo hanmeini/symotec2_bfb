@@ -92,11 +92,26 @@ th{background:#f2f2f2;text-align:center}
  <h1>Sales: <?php echo $_SESSION['username']; ?></h1>
 
 <form id="myForm" method="POST" action="simpan_penjualan.php" onsubmit="return validateStock(event)">
+    <div style="background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <label>Tipe Penjualan:</label>
+        <div style="display: flex; gap: 20px; align-items: center;">
+            <label style="font-weight: normal; margin: 0;"><input type="radio" name="jenis_penjualan" value="grosir" checked onchange="toggleSalesType()"> Grosir (Harga Normal)</label>
+            <label style="font-weight: normal; margin: 0;"><input type="radio" name="jenis_penjualan" value="retail" onchange="toggleSalesType()"> Retail / Eceran (Harga Diskon)</label>
+        </div>
+    </div>
+
     <label for="tanggal_transaksi">Tanggal Transaksi:</label>
     <input type="datetime-local" name="tanggal_transaksi" id="tanggal_transaksi" readonly required>
-    <input type="text" id="cust" name="cust" placeholder="Kode Pelanggan" required>
-    <input type="text" id="cust_name" name="cust_name" placeholder="Nama Pelanggan" required>
-    <button type="button" onclick="openCustomerPopup()">Pilih Pelanggan</button>
+    
+    <div id="customer_container">
+        <label>Pelanggan:</label>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="cust" name="cust" placeholder="Kode Pelanggan" value="0" readonly required>
+            <input type="text" id="cust_name" name="cust_name" placeholder="Nama Pelanggan" value="Umum" readonly required>
+            <button type="button" id="btn_pilih_cust" onclick="openCustomerPopup()" disabled style="padding: 10px; cursor: not-allowed; opacity: 0.5;">Pilih Pelanggan</button>
+        </div>
+    </div>
+    <br>
     <br><br>
     <label for="po">Nomor PO/Kontrak:</label>
     <input type="text" id="po" name="po" placeholder="Kosongkan jika tidak ada">
@@ -120,7 +135,7 @@ th{background:#f2f2f2;text-align:center}
                 <td><input type="text" name="nama_b[]" readonly required></td>
                 <td><input type="number" name="stok[]" readonly></td>
                 <td><input type="number" name="jumlah_k[]" min="0" value="0" oninput="calculatePPN(this);updateTotals();" required></td>
-                <td><input type="number" name="hargajual[]" class="hargajual" oninput="hitungDariHargaJual(this)"></td>
+                <td><input type="number" name="hargajual[]" class="hargajual" onchange="hitungDariHargaJual(this)"></td>
                 <td><input type="text" name="harga_k2[]" id="harga_k2" readonly required></td>
                 <td><input type="text" name="hargat_k[]" readonly required></td>
                 <td>
@@ -271,7 +286,7 @@ function addItem(){
         <td><input type="text" name="nama_b[]" readonly required></td>
         <td><input type="number" name="stok[]" readonly></td>
         <td><input type="number" name="jumlah_k[]" min="0" value="0" oninput="calculatePPN(this);updateTotals();" required></td>
-        <td><input type="number" name="hargajual[]" class="hargajual" oninput="hitungDariHargaJual(this)"></td>
+        <td><input type="number" name="hargajual[]" class="hargajual" onchange="hitungDariHargaJual(this)"></td>
         <td><input type="text" name="harga_k2[]" readonly required></td>
         <td><input type="text" name="hargat_k[]" readonly required></td>
         <td>
@@ -298,7 +313,10 @@ function removeItem(btn){btn.closest('tr').remove();updateTotals();}
 function getBarang(kode_b,el){
     if(!kode_b){el.closest('.item').querySelector('.suggestions').innerHTML="";return;}
     const idGudang = document.getElementById('id_gudang').value;
-    fetch(`search_barang.php?kode_b=${encodeURIComponent(kode_b)}&id_gudang=${idGudang}`)
+    const isRetail = document.querySelector('input[name="jenis_penjualan"]:checked').value === 'retail';
+    const endpoint = isRetail ? 'search_barang_retail.php' : 'search_barang.php';
+    
+    fetch(`${endpoint}?kode_b=${encodeURIComponent(kode_b)}&id_gudang=${idGudang}`)
     .then(r=>r.json())
     .then(suggestions=>{
         const suggestionBox=el.closest('.item').querySelector('.suggestions');
@@ -351,9 +369,7 @@ function calculatePPN(el){
     const jumlah_k = parseFloat(el.value) || 0;
 
     const ppn_k = parseFloat(
-        (item.querySelector('[name="ppn_k[]"]').value || "0")
-        .toString()
-        .replace(/,/g,'')
+        (item.querySelector('[name="ppn_k[]"]').dataset.ppn || "0")
     ) || 0;
 
     const hargapack = parseFloat(
@@ -388,7 +404,7 @@ function calculatePPN(el){
     } else {
 
         harga_k1 = harga_b + ppn_k;
-        harga_k2 = harga_b * jumlah_k;
+        harga_k2 = harga_b; // harga dasar per item
         hargat_k = harga_k1 * jumlah_k;
     }
 
@@ -435,7 +451,7 @@ function hitungDariHargaJual(el) {
 
     item.querySelector('[name="harga_k1[]"]').value = hargajual.toFixed(2);
     item.querySelector('[name="harga_k2[]"]').value = dpp_per_item.toFixed(2);
-    item.querySelector('[name="ppn_k[]"]').value = totalPPN.toFixed(2);
+    item.querySelector('[name="ppn_k[]"]').value = ppn_per_item.toFixed(2);
     item.querySelector('[name="hargat_k[]"]').value = grandTotal.toFixed(2);
 
     updateTotals();
@@ -527,6 +543,52 @@ function setCustomerCode(kode, nama) {
     document.getElementById('cust').value = kode;
     document.getElementById('cust_name').value = nama;
 }
+</script>
+<script>
+function toggleSalesType() {
+    const isRetail = document.querySelector('input[name="jenis_penjualan"]:checked').value === 'retail';
+    const custInput = document.getElementById('cust');
+    const custNameInput = document.getElementById('cust_name');
+    const btnPilih = document.getElementById('btn_pilih_cust');
+    
+    if (isRetail) {
+        custInput.value = '';
+        custInput.readOnly = false;
+        custNameInput.value = '';
+        custNameInput.readOnly = false;
+        btnPilih.disabled = false;
+        btnPilih.style.cursor = 'pointer';
+        btnPilih.style.opacity = '1';
+    } else {
+        custInput.value = '0';
+        custInput.readOnly = true;
+        custNameInput.value = 'Umum';
+        custNameInput.readOnly = true;
+        btnPilih.disabled = true;
+        btnPilih.style.cursor = 'not-allowed';
+        btnPilih.style.opacity = '0.5';
+    }
+    
+    // Reset form jika ganti tipe agar harga ter-refresh
+    const items = document.querySelectorAll('.item');
+    items.forEach((item, index) => {
+        if(index === 0) {
+            item.querySelector('[name="kode_b[]"]').value = '';
+            item.querySelector('[name="nama_b[]"]').value = '';
+            item.querySelector('[name="stok[]"]').value = '';
+            item.querySelector('[name="jumlah_k[]"]').value = '0';
+            item.querySelector('[name="harga_k2[]"]').value = '';
+            item.querySelector('[name="hargat_k[]"]').value = '';
+            item.querySelector('[name="harga_k[]"]').value = '';
+        } else {
+            item.remove();
+        }
+    });
+    updateTotals();
+}
+
+// Inisialisasi awal
+toggleSalesType();
 </script>
 </body>
 </html>
