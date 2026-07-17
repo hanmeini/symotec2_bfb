@@ -30,10 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userinv = $_POST['username1'] ?? $_SESSION['username'] ?? 'system';
         $jenis_penjualan = $_POST['jenis_penjualan'] ?? 'grosir';
         
-        $stmt = $conn->prepare("INSERT INTO penjualanHO1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $dpp, $ppn, $total_harga, $userinv, $po);
-        $stmt->execute();
-        $stmt->close();
+        // Matikan trigger sinkronisasi otomatis ke BFBS JIKA ini adalah Retail,
+        // Karena kita akan menyuntikkan data Retail secara manual ke BFBS dengan harga Normal.
+        if ($jenis_penjualan === 'retail') {
+            $conn->query("SET @disable_trigger = 1");
+            
+            $stmt = $conn->prepare("INSERT INTO penjualanHO1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $dpp, $ppn, $total_harga, $userinv, $po);
+            $stmt->execute();
+            $stmt->close();
+        }
         
         // Menghapus blok auto-lunas pembayaranho1 agar sesuai dengan alur ATK (Pelunasan diproses manual)
 
@@ -178,8 +184,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_bfbs->execute();
                 $stmt_bfbs->close();
                 
-                // Sync nomor dokumen
-                $conn_bfbs->query("UPDATE master_nomor_dokumen SET nomor_terakhir = nomor_terakhir + 1 WHERE kode_dokumen = 'ORD'");
+                // master_nomor_dokumen sudah otomatis tersinkron oleh Trigger saat generateNomorDokumen,
+                // karena fungsi generateNomorDokumen dipanggil sebelum @disable_trigger diset.
                 
                 $conn_bfbs->commit();
                 $conn_bfbs->close();

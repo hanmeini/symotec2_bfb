@@ -98,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    WHERE J = ?";
     $update_stmt = $conn->prepare($update_sql);
     $update_stmt->bind_param("dssdds", $bayar_input, $bank_input, $userbayar_input, $uang, $kembalian, $j_value);
+    $conn->query("SET @disable_trigger = 1");
     $update_stmt->execute();
 
     if ($update_stmt->affected_rows > 0) {
@@ -117,6 +118,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
        $jenis
         );
         if ($insert_stmt->execute()) {
+            $conn->query("SET @disable_trigger = NULL");
+            
+            // ==========================================
+            // SINKRONISASI BFBS (Update penjualanHO1 & Kas)
+            // ==========================================
+            try {
+                $conn_bfbs = new mysqli('localhost', 'root', '', 'symotec2_bfbs');
+                $conn_bfbs->begin_transaction();
+                
+                // Cek apakah invoice ini ada di BFBS dan berapa sisanya
+                $res_bfbs = $conn_bfbs->query("SELECT jumlah, sisa, bayar FROM penjualanHO1 WHERE J = '$j_value'");
+                if ($row_bfbs = $res_bfbs->fetch_assoc()) {
+                    $bfbs_sisa = (float)$row_bfbs['sisa'];
+                    $bfbs_bayar_lama = (float)$row_bfbs['bayar'];
+                    
+                    $persentase_bayar = 0;
+                    if ($sisa > 0) {
+                        $persentase_bayar = $bayar1 / $sisa;
+                    }
+                    
+                    $bfbs_bayar_sekarang = $bfbs_sisa * $persentase_bayar;
+                    $bfbs_bayar_baru = $bfbs_bayar_lama + $bfbs_bayar_sekarang;
+                    
+                    // Update penjualanHO1 BFBS
+                    $stmt_upd_bfbs = $conn_bfbs->prepare("UPDATE penjualanHO1 SET bayar = ?, bank = ?, userbayar = ?, uang = ?, kembalian = ? WHERE J = ?");
+                    $stmt_upd_bfbs->bind_param("dssdds", $bfbs_bayar_baru, $bank_input, $userbayar_input, $uang, $kembalian, $j_value);
+                    $stmt_upd_bfbs->execute();
+                    $stmt_upd_bfbs->close();
+                    
+                    // KAS BFBS
+                    if ($bfbs_bayar_sekarang > 0) {
+                        $insert_sql_bfbs = "INSERT INTO kas (tanggal, no, keterangan, debet, bank, username, jenis) 
+                                            VALUES ('$tanggal', '$j_value', '$cust', $bfbs_bayar_sekarang, '$bank_input', '$userbayar_input', 'pelunasan_piutang')";
+                        $conn_bfbs->query($insert_sql_bfbs);
+                    }
+                }
+                $conn_bfbs->commit();
+                $conn_bfbs->close();
+            } catch (Exception $ex) {
+                if (isset($conn_bfbs)) $conn_bfbs->close();
+            }
+
             echo "Pelunasan berhasil disimpan!";
             header("Location: reports.php");
             exit();

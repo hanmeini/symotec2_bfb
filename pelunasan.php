@@ -108,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     
 // Update data transaksi di database (hanya bayar dan bank yang diupdate, sisa otomatis dihitung)
+    $conn->query("SET @disable_trigger = 1");
     $update_sql = "UPDATE penjualanHO1
                    SET bayar = ?, bank = ?, userbayar = ? , uang = ? , kembalian = ? 
                    WHERE J = ?";
@@ -141,6 +142,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt_jurnal->execute();
 
         $stmt_jurnal->close();
+        
+        $conn->query("SET @disable_trigger = NULL");
+        
+        // ==========================================
+        // SINKRONISASI BFBS (Update penjualanHO1 & Jurnal)
+        // ==========================================
+        try {
+            $conn_bfbs = new mysqli('localhost', 'root', '', 'symotec2_bfbs');
+            $conn_bfbs->begin_transaction();
+            
+            // Cek apakah invoice ini ada di BFBS dan berapa sisanya
+            $res_bfbs = $conn_bfbs->query("SELECT jumlah, sisa, bayar FROM penjualanHO1 WHERE J = '$j_value'");
+            if ($row_bfbs = $res_bfbs->fetch_assoc()) {
+                $bfbs_sisa = (float)$row_bfbs['sisa'];
+                $bfbs_bayar_lama = (float)$row_bfbs['bayar'];
+                
+                // Hitung persentase pembayaran di BFB, terapkan persentase yang sama di BFBS
+                // Jika lunas 100% di BFB, lunas 100% juga di BFBS
+                $persentase_bayar = 0;
+                if ($sisa > 0) {
+                    $persentase_bayar = $bayar1 / $sisa;
+                }
+                
+                $bfbs_bayar_sekarang = $bfbs_sisa * $persentase_bayar;
+                $bfbs_bayar_baru = $bfbs_bayar_lama + $bfbs_bayar_sekarang;
+                
+                // Update penjualanHO1 BFBS (tanpa update sisa karena di DB mungkin dihitung trigger atau via view)
+                $stmt_upd_bfbs = $conn_bfbs->prepare("UPDATE penjualanHO1 SET bayar = ?, bank = ?, userbayar = ?, uang = ?, kembalian = ? WHERE J = ?");
+                $stmt_upd_bfbs->bind_param("dssdds", $bfbs_bayar_baru, $bank_input, $userbayar_input, $uang, $kembalian, $j_value);
+                $stmt_upd_bfbs->execute();
+                $stmt_upd_bfbs->close();
+                
+                // JURNAL BFBS
+                if ($bfbs_bayar_sekarang > 0) {
+                    $stmt_jurnal_bfbs = $conn_bfbs->prepare("INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit, kode_booking) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    
+                    // 1. Debet Kas Sales
+                    $d = $bfbs_bayar_sekarang; $k = 0; $coa = $coa_kas_sales;
+                    $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_lunas, $tanggal, $ket_jurnal, $coa, $d, $k, $j_value);
+                    $stmt_jurnal_bfbs->execute();
+                    
+                    // 2. Kredit Piutang
+                    $d = 0; $k = $bfbs_bayar_sekarang; $coa = '11201';
+                    $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_lunas, $tanggal, $ket_jurnal, $coa, $d, $k, $j_value);
+                    $stmt_jurnal_bfbs->execute();
+                    
+                    $stmt_jurnal_bfbs->close();
+                }
+            }
+            $conn_bfbs->commit();
+            $conn_bfbs->close();
+        } catch (Exception $ex) {
+            if (isset($conn_bfbs)) $conn_bfbs->close();
+        }
 
         // ✅ Munculkan alert & redirect ke nota.php
         echo "<script>

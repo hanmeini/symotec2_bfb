@@ -84,6 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // JURNAL A: PENGAKUAN PENJUALAN
         $ket_jurnal = "Penjualan POS " . $nomor_inv;
+        
+        // Matikan trigger sementara agar Jurnal BFB tidak tercopy buta ke BFBS
+        $conn->query("SET @disable_trigger = 1");
+        
         $stmt_jurnal = $conn->prepare("INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit, kode_booking) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
         // 1. Debet: Piutang Dagang
@@ -119,6 +123,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt_jurnal->execute();
         }
         $stmt_jurnal->close();
+        $conn->query("SET @disable_trigger = NULL");
+        
+        // ==========================================
+        // SINKRONISASI JURNAL BFBS
+        // ==========================================
+        try {
+            $conn_bfbs = new mysqli('localhost', 'root', '', 'symotec2_bfbs');
+            $conn_bfbs->begin_transaction();
+            
+            // Ambil nominal asli yang tercatat di BFBS (Normal Price)
+            $res_bfbs = $conn_bfbs->query("SELECT harga, ppn, jumlah FROM penjualanHO1 WHERE J = '$nomor_inv' OR J = '$ord_nomor'");
+            if ($row_bfbs = $res_bfbs->fetch_assoc()) {
+                $bfbs_dpp = $row_bfbs['harga'];
+                $bfbs_ppn = $row_bfbs['ppn'];
+                $bfbs_total = $row_bfbs['jumlah'];
+                
+                $stmt_jurnal_bfbs = $conn_bfbs->prepare("INSERT INTO jurnal (journal_number, tanggal, keterangan, coa, debet, kredit, kode_booking) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                
+                // Piutang BFBS
+                $d = $bfbs_total; $k = 0; $coa = $coa_user;
+                $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
+                $stmt_jurnal_bfbs->execute();
+                
+                // Penjualan BFBS
+                $d = 0; $k = $bfbs_dpp; $coa = '41101';
+                $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
+                $stmt_jurnal_bfbs->execute();
+                
+                // PPN BFBS
+                if ($bfbs_ppn > 0) {
+                    $d = 0; $k = $bfbs_ppn; $coa = '21201';
+                    $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
+                    $stmt_jurnal_bfbs->execute();
+                }
+                
+                // HPP & Persediaan BFBS (Sama dengan BFB)
+                if ($total_hpp > 0) {
+                    $d = $total_hpp; $k = 0; $coa = '51101';
+                    $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
+                    $stmt_jurnal_bfbs->execute();
+                    
+                    $d = 0; $k = $total_hpp; $coa = '11301';
+                    $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
+                    $stmt_jurnal_bfbs->execute();
+                }
+                $stmt_jurnal_bfbs->close();
+            }
+            $conn_bfbs->commit();
+            $conn_bfbs->close();
+        } catch (Exception $ex) {
+            // Abaikan jika BFBS gagal, BFB tetap komit
+            if (isset($conn_bfbs)) $conn_bfbs->close();
+        }
 
         $conn->commit();
         $message = "<div class='alert alert-success d-flex justify-content-between align-items-center'>

@@ -48,6 +48,6 @@ $stmt->close();
 $conn->close();
 
 // Redirect kembali ke halaman sebelumnya setelah 3 detik
-header("refresh:3; url=barang.php");
+header("refresh:1; url=barang.php");
 exit();
 ?>
