@@ -129,7 +129,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // SINKRONISASI JURNAL BFBS
         // ==========================================
         try {
-            $conn_bfbs = new mysqli('localhost', 'root', '', 'symotec2_bfbs');
+            $db_host = getenv('DB_HOST') ?: 'localhost';
+            $db_user = getenv('DB_USER') ?: 'root';
+            $db_pass = getenv('DB_PASS') ?: '';
+            $db_bfbs = getenv('DB_BFBS_NAME') ?: 'symotec2_bfbs';
+            
+            $conn_bfbs = new mysqli($db_host, $db_user, $db_pass, $db_bfbs);
             $conn_bfbs->begin_transaction();
             
             // Ambil nominal asli yang tercatat di BFBS (Normal Price)

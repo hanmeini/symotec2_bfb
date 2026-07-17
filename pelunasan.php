@@ -149,7 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // SINKRONISASI BFBS (Update penjualanHO1 & Jurnal)
         // ==========================================
         try {
-            $conn_bfbs = new mysqli('localhost', 'root', '', 'symotec2_bfbs');
+            $db_host = getenv('DB_HOST') ?: 'localhost';
+            $db_user = getenv('DB_USER') ?: 'root';
+            $db_pass = getenv('DB_PASS') ?: '';
+            $db_bfbs = getenv('DB_BFBS_NAME') ?: 'symotec2_bfbs';
+            
+            $conn_bfbs = new mysqli($db_host, $db_user, $db_pass, $db_bfbs);
             $conn_bfbs->begin_transaction();
             
             // Cek apakah invoice ini ada di BFBS dan berapa sisanya

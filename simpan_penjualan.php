@@ -116,7 +116,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ===================================
         if ($jenis_penjualan === 'retail') {
             try {
-                $conn_bfbs = new mysqli('localhost', 'root', '', 'symotec2_bfbs');
+                $db_host = getenv('DB_HOST') ?: 'localhost';
+                $db_user = getenv('DB_USER') ?: 'root';
+                $db_pass = getenv('DB_PASS') ?: '';
+                $db_bfbs = getenv('DB_BFBS_NAME') ?: 'symotec2_bfbs';
+                
+                $conn_bfbs = new mysqli($db_host, $db_user, $db_pass, $db_bfbs);
                 if ($conn_bfbs->connect_error) {
                     throw new Exception("Koneksi BFBS gagal: " . $conn_bfbs->connect_error);
                 }
