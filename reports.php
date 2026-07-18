@@ -306,6 +306,29 @@ $html_cabang .= "<tr style='font-weight:bold; background-color:#eee;'>
 
 $html_cabang .= "</table>";
 
+$html_bank = "";
+$html_bank .= "<h2>Summary Per Bank / Setoran</h2><table border='1' cellpadding='5' cellspacing='0'>
+        <tr>
+            <th>Nama Bank</th>
+            <th>Total Setoran / Pelunasan</th>
+        </tr>";
+
+$total_setoran_all = 0;
+if (isset($summary_bank) && is_array($summary_bank)) {
+    foreach ($summary_bank as $nm_bank => $tot_bayar) {
+        $html_bank .= "<tr>
+                <td>" . htmlspecialchars($nm_bank) . "</td>
+                <td>" . number_format($tot_bayar, 2) . "</td>
+              </tr>";
+        $total_setoran_all += $tot_bayar;
+    }
+}
+$html_bank .= "<tr style='font-weight:bold; background-color:#eee;'>
+        <td>TOTAL SETORAN</td>
+        <td>" . number_format($total_setoran_all, 2) . "</td>
+      </tr>";
+$html_bank .= "</table>";
+
 echo $html_bank . "<br>" . $html_cabang . "<br><h2>Detail Tiap Penjualan</h2>" . $html_detail;
 
 $stmt->close();
