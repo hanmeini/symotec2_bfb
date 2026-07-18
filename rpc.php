@@ -142,11 +142,11 @@ if (isset($_GET['print'])) {
                 <?php $no=1; foreach($rekap_items as $item): ?>
                 <tr>
                     <td class="text-center"><?= $no++ ?></td>
-                    <td><?= htmlspecialchars($item['kodeb']) ?></td>
+                    <td><?= htmlspecialchars($item['kodeb'] ?? '') ?></td>
                     <td>
-                        <strong><?= htmlspecialchars($item['nama_b']) ?></strong>
+                        <strong><?= htmlspecialchars($item['nama_b'] ?? '') ?></strong>
                     </td>
-                    <td class="text-center" style="font-size: 18px;"><strong><?= number_format($item['total_qty'], 0, ',', '.') ?></strong></td>
+                    <td class="text-center" style="font-size: 18px;"><strong><?= number_format($item['total_qty'] ?? 0, 0, ',', '.') ?></strong></td>
                 </tr>
                 <?php endforeach; ?>
             <?php else: ?>
