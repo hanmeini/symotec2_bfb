@@ -9,11 +9,10 @@
 
 require_once 'config1.php';
 
-// Query utama join dengan tabel location
+// Query utama
 $sql = "
-    SELECT j.*, l.nama_cabang 
+    SELECT j.*, 'Pusat' as nama_cabang 
     FROM jurnal j
-    LEFT JOIN location l ON j.location = l.idl
     ORDER BY j.journal_number
 ";
 $result = $conn->query($sql);
@@ -27,12 +26,9 @@ if ($result && $result->num_rows > 0) {
     $message = "Tidak ada data di tabel jurnal.";
 }
 
-// Ambil data lokasi untuk filter (distinct berdasarkan idl)
+// Ambil data lokasi untuk filter (hardcoded karena bfb tidak ada location di jurnal)
 $locationQuery = "
-    SELECT DISTINCT l.idl, l.nama_cabang 
-    FROM jurnal j 
-    LEFT JOIN location l ON j.location = l.idl
-    WHERE l.nama_cabang IS NOT NULL
+    SELECT '1' as idl, 'Pusat' as nama_cabang
 ";
 $locationResult = $conn->query($locationQuery);
 ?>
