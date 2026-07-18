@@ -48,7 +48,7 @@ if ($filter !== '') {
 $sql = "SELECT 
             p.tanggal_transaksi, p.J, p.cust, p.jumlah, p.bayar, p.sisa, p.userinv,
             DATEDIFF(CURDATE(), p.tanggal_transaksi) AS umur
-        FROM penjualanHO1 p 
+        FROM penjualanho1 p 
         WHERE p.sisa > 0 $sales_filter $filter_sql
         ORDER BY p.tanggal_transaksi DESC";
 $result = $conn->query($sql);

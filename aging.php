@@ -132,7 +132,7 @@ require_once 'config1.php';
         <select name="cust">
             <option value="">All Customers</option>
             <?php
-            $result = $conn->query("SELECT DISTINCT cust FROM penjualanHO1");
+            $result = $conn->query("SELECT DISTINCT cust FROM penjualanho1");
             while ($row = $result->fetch_assoc()) {
                 echo "<option value='" . $row['cust'] . "'>" . htmlspecialchars($row['cust']) . "</option>";
             }
@@ -175,7 +175,7 @@ if ($is_sales) {
 $sql = "
     SELECT
         tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, '' as bank, 0 as bayar, jumlah as sisa, '' as fp_k, userinv, '' as userbayar, IF(userinv IN ('admin', 'HO', 'HO1'), 'Pusat', UPPER(userinv)) as cabang
-    FROM penjualanHO1
+    FROM penjualanho1
     WHERE DATE(tanggal_transaksi) <= ?
       AND (jumlah - 0) > 0
       AND J IS NOT NULL$sales_filter";

@@ -31,13 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt->execute();
             $stmt->close();
             
-            // Update penjualanHO1 (Tandai SJ sudah masuk RPC ini)
-            $conn->query("UPDATE penjualanHO1 SET no_rpc = '$no_rpc' WHERE id_transaksi IN ($ids_str)");
+            // Update penjualanho1 (Tandai SJ sudah masuk RPC ini)
+            $conn->query("UPDATE penjualanho1 SET no_rpc = '$no_rpc' WHERE id_transaksi IN ($ids_str)");
             
             // Ambil semua item (kodeb) dari SJ yang baru saja di-update untuk hitung ulang Stock Gudang (sg)
             $q_items = "SELECT DISTINCT s.kodeb 
                         FROM stock s 
-                        JOIN penjualanHO1 p ON s.sj = p.inv 
+                        JOIN penjualanho1 p ON s.sj = p.inv 
                         WHERE p.id_transaksi IN ($ids_str)";
             $res_items = $conn->query($q_items);
             if ($res_items) {
@@ -68,7 +68,7 @@ if (isset($_GET['print'])) {
     $no_rpc_print = $_GET['print'];
     
     // Ambil daftar SJ
-    $res_sj = $conn->query("SELECT inv FROM penjualanHO1 WHERE no_rpc = '" . $conn->real_escape_string($no_rpc_print) . "'");
+    $res_sj = $conn->query("SELECT inv FROM penjualanho1 WHERE no_rpc = '" . $conn->real_escape_string($no_rpc_print) . "'");
     while ($row = $res_sj->fetch_assoc()) {
         $list_sj[] = $row['inv'];
     }
@@ -202,7 +202,7 @@ if (isset($_GET['print'])) {
                     </thead>
                     <tbody>
                         <?php
-                        $result = $conn->query("SELECT * FROM penjualanHO1 WHERE inv LIKE '%SJ%' AND (no_rpc IS NULL OR no_rpc = '') ORDER BY id_transaksi DESC");
+                        $result = $conn->query("SELECT * FROM penjualanho1 WHERE inv LIKE '%SJ%' AND (no_rpc IS NULL OR no_rpc = '') ORDER BY id_transaksi DESC");
                         if ($result->num_rows > 0) {
                             while ($row = $result->fetch_assoc()) {
                                 echo "<tr>

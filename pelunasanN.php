@@ -55,7 +55,7 @@ if (isset($_GET['J'])) {
 
     // Query untuk mengambil data transaksi berdasarkan 'J'
     $sql = "SELECT tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, bank, bayar, sisa 
-            FROM penjualanHO1 WHERE J = ?";
+            FROM penjualanho1 WHERE J = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $j_value);
     $stmt->execute();
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     
 // Update data transaksi di database (hanya bayar dan bank yang diupdate, sisa otomatis dihitung)
-    $update_sql = "UPDATE penjualanHO1
+    $update_sql = "UPDATE penjualanho1
                    SET bayar = ?, bank = ?, userbayar = ? , uang = ? , kembalian = ? 
                    WHERE J = ?";
     $update_stmt = $conn->prepare($update_sql);
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->query("SET @disable_trigger = NULL");
             
             // ==========================================
-            // SINKRONISASI BFBS (Update penjualanHO1 & Kas)
+            // SINKRONISASI BFBS (Update penjualanho1 & Kas)
             // ==========================================
             try {
                 $db_host = getenv('DB_HOST') ?: 'localhost';
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conn_bfbs->begin_transaction();
                 
                 // Cek apakah invoice ini ada di BFBS dan berapa sisanya
-                $res_bfbs = $conn_bfbs->query("SELECT jumlah, sisa, bayar FROM penjualanHO1 WHERE J = '$j_value'");
+                $res_bfbs = $conn_bfbs->query("SELECT jumlah, sisa, bayar FROM penjualanho1 WHERE J = '$j_value'");
                 if ($row_bfbs = $res_bfbs->fetch_assoc()) {
                     $bfbs_sisa = (float)$row_bfbs['sisa'];
                     $bfbs_bayar_lama = (float)$row_bfbs['bayar'];
@@ -146,8 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $bfbs_bayar_sekarang = $bfbs_sisa * $persentase_bayar;
                     $bfbs_bayar_baru = $bfbs_bayar_lama + $bfbs_bayar_sekarang;
                     
-                    // Update penjualanHO1 BFBS
-                    $stmt_upd_bfbs = $conn_bfbs->prepare("UPDATE penjualanHO1 SET bayar = ?, bank = ?, userbayar = ?, uang = ?, kembalian = ? WHERE J = ?");
+                    // Update penjualanho1 BFBS
+                    $stmt_upd_bfbs = $conn_bfbs->prepare("UPDATE penjualanho1 SET bayar = ?, bank = ?, userbayar = ?, uang = ?, kembalian = ? WHERE J = ?");
                     $stmt_upd_bfbs->bind_param("dssdds", $bfbs_bayar_baru, $bank_input, $userbayar_input, $uang, $kembalian, $j_value);
                     $stmt_upd_bfbs->execute();
                     $stmt_upd_bfbs->close();

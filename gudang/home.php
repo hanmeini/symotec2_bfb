@@ -61,7 +61,7 @@ try {
     $gudangterimabelum = $stmt2->fetchColumn();
     
     // Menghitung jumlah AP Sales yang belum lunas
-    $sql3 = "SELECT COUNT(*) FROM penjualanHO1 WHERE sisa > 0";
+    $sql3 = "SELECT COUNT(*) FROM penjualanho1 WHERE sisa > 0";
     if (isset($_SESSION['location']) && $_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
         $sql3 .= " AND userinv = ?";
         $stmt3 = $pdo->prepare($sql3);

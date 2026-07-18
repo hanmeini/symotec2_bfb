@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         UNION ALL
         SELECT J, cus, kode_b, nama_b, jumlah_k, user, cabang, tanggal_transaksi FROM transaksiNK
         UNION ALL
-           SELECT J, cus, kode_b, nama_b, jumlah_k, user, cabang, tanggal_transaksi FROM transaksiHO1
+           SELECT J, cus, kode_b, nama_b, jumlah_k, user, cabang, tanggal_transaksi FROM transaksiho1
         UNION ALL
         SELECT J, cus, kode_b, nama_b, jumlah_k, user, cabang, tanggal_transaksi FROM transaksiLMD
         UNION ALL

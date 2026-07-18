@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($jenis_penjualan === 'retail') {
             $conn->query("SET @disable_trigger = 1");
             
-            $stmt = $conn->prepare("INSERT INTO penjualanHO1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $conn->prepare("INSERT INTO penjualanho1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $dpp, $ppn, $total_harga, $userinv, $po);
             $stmt->execute();
             $stmt->close();
@@ -48,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userin = $_SESSION['username'] ?? 'system';
         $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, J, cus, kodeb, jumlah_k, harga_k, ppn_k, hargat_k, userid, sj, id_gudang, bulan, noseri) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
-        // Simpan ke transaksiHO1 (mengikuti ledger ATK HO)
-        $stmtTransaksi = $conn->prepare("INSERT INTO transaksiHO1 (tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k, user, sj, id_gudang, dpp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // Simpan ke transaksiho1 (mengikuti ledger ATK HO)
+        $stmtTransaksi = $conn->prepare("INSERT INTO transaksiho1 (tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k, user, sj, id_gudang, dpp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
         $total_hpp = 0;
 
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtStock->bind_param("ssssddddssiis", $tanggal, $nomor, $cust, $kode, $qty, $hrg, $pjk, $tot, $userin, $nomor, $id_gudang, $bln, $ns);
             $stmtStock->execute();
             
-            // Ambil HPP (harga beli) untuk mencatat di dpp transaksiHO1
+            // Ambil HPP (harga beli) untuk mencatat di dpp transaksiho1
             $hpp_item = 0;
             $stmt_hpp = $conn->prepare("SELECT harga_m FROM b WHERE kode_b = ? LIMIT 1");
             $stmt_hpp->bind_param("s", $kode);
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $stmt_hpp->close();
             
-            // Simpan ke transaksiHO1
+            // Simpan ke transaksiho1
             $stmtTransaksi->bind_param("sssssddddssid", $tanggal, $nomor, $cust, $kode, $nama, $qty, $hrg, $pjk, $tot, $userin, $nomor, $id_gudang, $hpp_item);
             $stmtTransaksi->execute();
             
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_harga_bfbs = 0;
                 
                 $stmtStock_bfbs = $conn_bfbs->prepare("INSERT INTO stock (tanggal_transaksi, J, cus, kodeb, jumlah_k, harga_k, ppn_k, hargat_k, userid, sj, id_gudang, bulan, noseri) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmtTransaksi_bfbs = $conn_bfbs->prepare("INSERT INTO transaksiHO1 (tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k, user, sj, id_gudang, dpp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmtTransaksi_bfbs = $conn_bfbs->prepare("INSERT INTO transaksiho1 (tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k, user, sj, id_gudang, dpp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 
                 foreach ($kode_b as $i => $kode) {
                     if (empty($kode)) continue;
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtStock_bfbs->bind_param("ssssddddssiis", $tanggal, $nomor, $cust, $kode, $qty, $hrg_normal, $pjk_normal, $tot_normal, $userin, $nomor, $id_gudang, $bln, $ns);
                     $stmtStock_bfbs->execute();
                     
-                    // Note: HPP untuk transaksiHO1 retail BFBS diset 0 karena hanya dicatat di BFB
+                    // Note: HPP untuk transaksiho1 retail BFBS diset 0 karena hanya dicatat di BFB
                     $hpp_item_bfbs = 0;
                     $stmtTransaksi_bfbs->bind_param("sssssddddssid", $tanggal, $nomor, $cust, $kode, $nama, $qty, $hrg_normal, $pjk_normal, $tot_normal, $userin, $nomor, $id_gudang, $hpp_item_bfbs);
                     $stmtTransaksi_bfbs->execute();
@@ -184,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_dpp_bfbs -= $diskon;
                 $total_harga_bfbs -= $diskon;
                 
-                $stmt_bfbs = $conn_bfbs->prepare("INSERT INTO penjualanHO1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt_bfbs = $conn_bfbs->prepare("INSERT INTO penjualanho1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt_bfbs->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $total_dpp_bfbs, $total_ppn_bfbs, $total_harga_bfbs, $userinv, $po);
                 $stmt_bfbs->execute();
                 $stmt_bfbs->close();

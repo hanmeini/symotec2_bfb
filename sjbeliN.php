@@ -40,7 +40,7 @@ $sj_value = $_GET['sj'];
 
 // Query transaksi berdasarkan sj
 $sql = "SELECT tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_m, harga_m, dpp, ppn_m, hargat_m, user, cabang, sj
-        FROM transaksiHO1
+        FROM transaksiho1
         WHERE sj = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $sj_value);

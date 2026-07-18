@@ -83,8 +83,8 @@ if ($id_gudang > 0) {
 $conn->begin_transaction();
 
 try {
-    // 1. Insert ke transaksiHO1 (Ledger Transaksi)
-    $stmtTransaksi = $conn->prepare("INSERT INTO transaksiHO1 (tanggal_transaksi, J, kode_b, nama_b, jumlah_m, cus, user, sj, cabang, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    // 1. Insert ke transaksiho1 (Ledger Transaksi)
+    $stmtTransaksi = $conn->prepare("INSERT INTO transaksiho1 (tanggal_transaksi, J, kode_b, nama_b, jumlah_m, cus, user, sj, cabang, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     // 2. Insert ke stock (Ledger Inventori)
     $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, J, sup, kodeb, jumlah_m, userid, sj, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
@@ -107,7 +107,7 @@ try {
             $id_gudang
         );
         if (!$stmtTransaksi->execute()) {
-            throw new Exception("Gagal insert ke transaksiHO1: " . $stmtTransaksi->error);
+            throw new Exception("Gagal insert ke transaksiho1: " . $stmtTransaksi->error);
         }
 
         // Eksekusi Ledger Inventori (Stock)
@@ -133,7 +133,7 @@ try {
     $stmtStock->close();
 
     // Simpan ke tabel pembelian_b
-    $stmt2 = $conn->prepare("INSERT INTO pembelianHO1 (sup, tanggal_transaksi, j, sj) VALUES (?, ?, ?, ?)");
+    $stmt2 = $conn->prepare("INSERT INTO pembelianho1 (sup, tanggal_transaksi, j, sj) VALUES (?, ?, ?, ?)");
     $stmt2->bind_param("ssss", $sup, $tanggal_transaksi, $Jb, $sj);
     if (!$stmt2->execute()) {
         throw new Exception($stmt2->error);

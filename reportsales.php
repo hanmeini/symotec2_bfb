@@ -67,7 +67,7 @@ if ($_SESSION['bagian'] === 'sales') {
 if ($is_sales) {
     $sql = "
     SELECT tanggal_transaksi,J,cust,diskon,harga,ppn,jumlah,bank,bayar,sisa,fp_k,userinv,userbayar
-    FROM penjualanHO1
+    FROM penjualanho1
     WHERE DATE(tanggal_transaksi) BETWEEN ? AND ?
     AND userinv = ?
     AND J IS NOT NULL
@@ -79,7 +79,7 @@ if ($is_sales) {
 } else {
     $sql = "
     SELECT tanggal_transaksi,J,cust,diskon,harga,ppn,jumlah,bank,bayar,sisa,fp_k,userinv,userbayar
-    FROM penjualanHO1
+    FROM penjualanho1
     WHERE DATE(tanggal_transaksi) BETWEEN ? AND ?
     AND J IS NOT NULL
     ORDER BY J

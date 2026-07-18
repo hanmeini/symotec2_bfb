@@ -6,7 +6,7 @@ function recalculate_stock_history($conn, $kodeb) {
     $stmt = $conn->prepare("SELECT s.ids, s.jumlah_m, s.harga_m, s.hargat_m, s.jumlah_k, s.sj, 
                                    p.no_rpc 
                             FROM stock s 
-                            LEFT JOIN penjualanHO1 p ON s.sj = p.inv 
+                            LEFT JOIN penjualanho1 p ON s.sj = p.inv 
                             WHERE s.kodeb = ? 
                             ORDER BY s.tanggal_transaksi ASC, s.ids ASC");
     $stmt->bind_param("s", $kodeb);

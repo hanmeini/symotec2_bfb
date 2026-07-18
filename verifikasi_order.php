@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $conn->begin_transaction();
     try {
         // Cek order
-        $stmt = $conn->prepare("SELECT * FROM penjualanHO1 WHERE J = ?");
+        $stmt = $conn->prepare("SELECT * FROM penjualanho1 WHERE J = ?");
         $stmt->bind_param("s", $ord_nomor);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -37,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $ppn = $order['ppn'];
         $userinv = $order['userinv'];
 
-        // Update penjualanHO1
-        $upd_penj = $conn->prepare("UPDATE penjualanHO1 SET J = ?, inv = ? WHERE J = ?");
+        // Update penjualanho1
+        $upd_penj = $conn->prepare("UPDATE penjualanho1 SET J = ?, inv = ? WHERE J = ?");
         $upd_penj->bind_param("sss", $nomor_inv, $nomor_sj, $ord_nomor);
         $upd_penj->execute();
         $upd_penj->close();
@@ -49,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $upd_stock->execute();
         $upd_stock->close();
 
-        // Update transaksiHO1
-        $upd_trans = $conn->prepare("UPDATE transaksiHO1 SET J = ?, sj = ? WHERE J = ?");
+        // Update transaksiho1
+        $upd_trans = $conn->prepare("UPDATE transaksiho1 SET J = ?, sj = ? WHERE J = ?");
         $upd_trans->bind_param("sss", $nomor_inv, $nomor_sj, $ord_nomor);
         $upd_trans->execute();
         $upd_trans->close();
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $conn_bfbs->begin_transaction();
             
             // Ambil nominal asli yang tercatat di BFBS (Normal Price)
-            $res_bfbs = $conn_bfbs->query("SELECT harga, ppn, jumlah FROM penjualanHO1 WHERE J = '$nomor_inv' OR J = '$ord_nomor'");
+            $res_bfbs = $conn_bfbs->query("SELECT harga, ppn, jumlah FROM penjualanho1 WHERE J = '$nomor_inv' OR J = '$ord_nomor'");
             if ($row_bfbs = $res_bfbs->fetch_assoc()) {
                 $bfbs_dpp = $row_bfbs['harga'];
                 $bfbs_ppn = $row_bfbs['ppn'];
@@ -196,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $conn->begin_transaction();
     try {
         // Cek order
-        $stmt = $conn->prepare("SELECT * FROM penjualanHO1 WHERE J = ? AND (inv IS NULL OR inv = '')");
+        $stmt = $conn->prepare("SELECT * FROM penjualanho1 WHERE J = ? AND (inv IS NULL OR inv = '')");
         $stmt->bind_param("s", $ord_nomor);
         $stmt->execute();
         if ($stmt->get_result()->num_rows === 0) {
@@ -216,8 +216,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt_stock->close();
 
         // Hapus dari ketiga tabel operasional
-        $conn->query("DELETE FROM penjualanHO1 WHERE J = '" . $conn->real_escape_string($ord_nomor) . "'");
-        $conn->query("DELETE FROM transaksiHO1 WHERE J = '" . $conn->real_escape_string($ord_nomor) . "'");
+        $conn->query("DELETE FROM penjualanho1 WHERE J = '" . $conn->real_escape_string($ord_nomor) . "'");
+        $conn->query("DELETE FROM transaksiho1 WHERE J = '" . $conn->real_escape_string($ord_nomor) . "'");
         $conn->query("DELETE FROM stock WHERE J = '" . $conn->real_escape_string($ord_nomor) . "'");
 
         // Recalculate stok untuk barang yang terlibat
@@ -265,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <tbody>
                     <?php
                     $modals_html = ""; // Variabel untuk menyimpan HTML modal
-                    $result = $conn->query("SELECT * FROM penjualanHO1 WHERE J LIKE '%ORD%' AND (inv IS NULL OR inv = '') ORDER BY id_transaksi DESC");
+                    $result = $conn->query("SELECT * FROM penjualanho1 WHERE J LIKE '%ORD%' AND (inv IS NULL OR inv = '') ORDER BY id_transaksi DESC");
                     if ($result->num_rows > 0) {
                         $row_idx = 0;
                         while ($row = $result->fetch_assoc()) {
@@ -316,8 +316,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                                     </tr>
                                                 </thead>
                                                 <tbody>";
-                            // Ambil dari transaksiHO1
-                            $stmt_det = $conn->prepare("SELECT kode_b, nama_b, jumlah_k, harga_k, hargat_k FROM transaksiHO1 WHERE J = ?");
+                            // Ambil dari transaksiho1
+                            $stmt_det = $conn->prepare("SELECT kode_b, nama_b, jumlah_k, harga_k, hargat_k FROM transaksiho1 WHERE J = ?");
                             $stmt_det->bind_param("s", $j_val);
                             $stmt_det->execute();
                             $res_det = $stmt_det->get_result();

@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
         $conn->begin_transaction();
         try {
             // Validasi kepemilikan Invoice (Sales hanya bisa retur miliknya)
-            $q_invoice = "SELECT * FROM penjualanHO1 WHERE J = ?";
+            $q_invoice = "SELECT * FROM penjualanho1 WHERE J = ?";
             if ($is_sales) {
                 $q_invoice .= " AND userinv = '" . $conn->real_escape_string($username1) . "'";
             }
@@ -153,13 +153,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
             if ($total_retur_dpp > 0) {
                 $total_retur_harga = $total_retur_dpp + $total_retur_ppn;
                 
-                // 3. Masukkan record minus ke penjualanHO1 agar Omzet Terpotong
+                // 3. Masukkan record minus ke penjualanho1 agar Omzet Terpotong
                 $min_dpp = -$total_retur_dpp;
                 $min_ppn = -$total_retur_ppn;
                 $min_total = -$total_retur_harga;
                 $min_diskon = 0; 
                 
-                $stmt_penj = $conn->prepare("INSERT INTO penjualanHO1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt_penj = $conn->prepare("INSERT INTO penjualanho1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $po_retur = 'Retur';
                 $stmt_penj->bind_param("sssddddss", $tgl, $j_retur, $inv_data['cust'], $min_diskon, $min_dpp, $min_ppn, $min_total, $username1, $po_retur);
                 $stmt_penj->execute();
@@ -226,8 +226,8 @@ $items = [];
 $customer_name = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_search'])) {
     if (!empty($search_inv)) {
-        // Cek Invoice di penjualanHO1
-        $q_cek = "SELECT cust, J FROM penjualanHO1 WHERE J = ?";
+        // Cek Invoice di penjualanho1
+        $q_cek = "SELECT cust, J FROM penjualanho1 WHERE J = ?";
         if ($is_sales) {
             $q_cek .= " AND userinv = '" . $conn->real_escape_string($username1) . "'";
         }

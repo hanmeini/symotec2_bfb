@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $escaped_months = array_map(function($m) use ($conn) { return "'" . $conn->real_escape_string($m) . "'"; }, $selected_months);
 $in_clause = implode(',', $escaped_months);
 
-// 1) PENDAPATAN: SUM(harga) dari penjualanHO1 untuk bulan terpilih
+// 1) PENDAPATAN: SUM(harga) dari penjualanho1 untuk bulan terpilih
 $pendapatan = 0.0;
 $sql = "SELECT IFNULL(SUM(harga),0) AS total_pendapatan
-        FROM penjualanHO1
+        FROM penjualanho1
         WHERE DATE_FORMAT(tanggal_transaksi, '%Y-%m') IN ($in_clause)";
 $res = $conn->query($sql);
 if ($res && $row = $res->fetch_assoc()) {
@@ -57,10 +57,10 @@ if ($res && $row = $res->fetch_assoc()) {
 }
 if ($res) $res->free();
 
-// 2) HPP: SUM(dpp) dari transaksiHO1 untuk bulan terpilih
+// 2) HPP: SUM(dpp) dari transaksiho1 untuk bulan terpilih
 $hpp = 0.0;
 $sql = "SELECT IFNULL(SUM(dpp),0) AS total_hpp
-        FROM transaksiHO1
+        FROM transaksiho1
         WHERE DATE_FORMAT(tanggal_transaksi, '%Y-%m') IN ($in_clause)";
 $res = $conn->query($sql);
 if ($res && $row = $res->fetch_assoc()) {

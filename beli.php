@@ -4,8 +4,8 @@ require_once 'config1.php';
 // Ambil nilai 'J' dari URL
 $J = isset($_GET['Jb']) ? $_GET['Jb'] : null;
 
-// Cari header dari pembelianHO1 untuk dapatkan sj dan tanggal
-$sqlHeader = "SELECT tanggal_transaksi, sj, sup FROM pembelianHO1 WHERE j = ?";
+// Cari header dari pembelianho1 untuk dapatkan sj dan tanggal
+$sqlHeader = "SELECT tanggal_transaksi, sj, sup FROM pembelianho1 WHERE j = ?";
 $stmtH = $conn->prepare($sqlHeader);
 $stmtH->bind_param("s", $J);
 $stmtH->execute();
@@ -19,8 +19,8 @@ $cus = '';
 if ($stmtH->num_rows > 0) {
     $stmtH->bind_result($tanggal_transaksi, $sj, $cus);
     $stmtH->fetch();
-    // Cari detail item di transaksiHO1 (Karena sekarang tersentralisasi)
-    $sqlT = "SELECT kode_b, nama_b, jumlah_m, user, cabang FROM transaksiHO1 WHERE J = ?";
+    // Cari detail item di transaksiho1 (Karena sekarang tersentralisasi)
+    $sqlT = "SELECT kode_b, nama_b, jumlah_m, user, cabang FROM transaksiho1 WHERE J = ?";
     $stmtT = $conn->prepare($sqlT);
     $stmtT->bind_param("s", $J);
     $stmtT->execute();

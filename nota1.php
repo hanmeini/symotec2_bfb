@@ -50,9 +50,9 @@ if ($conn->connect_error) {
 // Ambil nilai 'J' dari URL
 $J = isset($_GET['J']) ? $_GET['J'] : null;
 
-// Query pertama: transaksiHO1
+// Query pertama: transaksiho1
 $sql = "SELECT tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k 
-        FROM transaksiHO1
+        FROM transaksiho1
         WHERE J = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $J);
@@ -83,9 +83,9 @@ if ($stmt->store_result() && $stmt->num_rows > 0) {
 }
 $stmt->close(); // Pastikan query pertama selesai
 
-// Query kedua: penjualanHO1
+// Query kedua: penjualanho1
 $sql2 = "SELECT J, cust, diskon, harga, ppn, jumlah , po
-         FROM penjualanHO1
+         FROM penjualanho1
          WHERE J = ?";
 $stmt2 = $conn->prepare($sql2);
 $stmt2->bind_param("s", $J);

@@ -3,9 +3,9 @@ require 'config1.php';
 
 echo "Memulai migrasi database BFB...\n";
 
-// 1. Tambah kolom no_rpc di tabel penjualanHO1
+// 1. Tambah kolom no_rpc di tabel penjualanho1
 try {
-    $conn->query("ALTER TABLE penjualanHO1 ADD COLUMN no_rpc VARCHAR(50) DEFAULT NULL");
+    $conn->query("ALTER TABLE penjualanho1 ADD COLUMN no_rpc VARCHAR(50) DEFAULT NULL");
     echo "Kolom no_rpc berhasil ditambahkan.\n";
 } catch (Exception $e) {
     echo "Info: Kolom no_rpc mungkin sudah ada atau terjadi error: " . $e->getMessage() . "\n";

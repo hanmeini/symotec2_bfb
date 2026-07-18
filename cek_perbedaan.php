@@ -23,7 +23,7 @@ require_once 'config1.php';
             <table>
                 <tr><th>No Order</th><th>Tanggal</th><th>Total Harga (Retail)</th></tr>
                 <?php
-                $res = $conn->query("SELECT J, tanggal_transaksi, jumlah FROM penjualanHO1 ORDER BY id_transaksi DESC LIMIT 5");
+                $res = $conn->query("SELECT J, tanggal_transaksi, jumlah FROM penjualanho1 ORDER BY id_transaksi DESC LIMIT 5");
                 if($res) {
                     while($row = $res->fetch_assoc()) {
                         echo "<tr><td>{$row['J']}</td><td>{$row['tanggal_transaksi']}</td><td>Rp " . number_format($row['jumlah'], 0, ',', '.') . "</td></tr>";
@@ -42,7 +42,7 @@ require_once 'config1.php';
                 if ($conn_bfbs->connect_error) {
                     echo "<tr><td colspan='3'>Gagal konek ke BFBS</td></tr>";
                 } else {
-                    $res2 = $conn_bfbs->query("SELECT J, tanggal_transaksi, jumlah FROM penjualanHO1 ORDER BY id_transaksi DESC LIMIT 5");
+                    $res2 = $conn_bfbs->query("SELECT J, tanggal_transaksi, jumlah FROM penjualanho1 ORDER BY id_transaksi DESC LIMIT 5");
                     if($res2) {
                         while($row = $res2->fetch_assoc()) {
                             echo "<tr><td>{$row['J']}</td><td>{$row['tanggal_transaksi']}</td><td>Rp " . number_format($row['jumlah'], 0, ',', '.') . "</td></tr>";

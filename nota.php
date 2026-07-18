@@ -36,7 +36,7 @@ $J = isset($_GET['J']) ? $_GET['J'] : null;
 
 // Query pertama: transaksiNK
 $sql = "SELECT tanggal_transaksi, J, cus, kode_b, nama_b, jumlah_k, harga_k, ppn_k, hargat_k 
-        FROM transaksiHO1
+        FROM transaksiho1
         WHERE J = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $J);
@@ -69,7 +69,7 @@ $stmt->close(); // Pastikan query pertama selesai
 
 // Query kedua: penjualanNK
 $sql2 = "SELECT J, cust, diskon, harga, ppn, jumlah , po, uang, kembalian, userbayar
-         FROM penjualanHO1
+         FROM penjualanho1
          WHERE J = ?";
 $stmt2 = $conn->prepare($sql2);
 $stmt2->bind_param("s", $J);

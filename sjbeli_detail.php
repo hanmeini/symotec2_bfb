@@ -80,15 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total_ppn    += $ppn_m;
             $total_hargat += $hargat;
 
-            // update harga_m, ppn_m, hargat_m di transaksiHO1
-            $sqlUpd = "UPDATE transaksiHO1 SET jumlah_m=?, harga_m=?, ppn_m=?, hargat_m=?  WHERE id_transaksi=?";
+            // update harga_m, ppn_m, hargat_m di transaksiho1
+            $sqlUpd = "UPDATE transaksiho1 SET jumlah_m=?, harga_m=?, ppn_m=?, hargat_m=?  WHERE id_transaksi=?";
             $stmtUpd = $conn->prepare($sqlUpd);
             $stmtUpd->bind_param("ddddi", $jumlah_m, $harga_m, $ppn_m, $hargat, $id_transaksi);
             $stmtUpd->execute();
             $stmtUpd->close();
 
             // ================== Perhitungan DPP ==================
-            $sqlInfo = "SELECT kode_b, tanggal_transaksi, jumlah_m FROM transaksiHO1 WHERE id_transaksi=?";
+            $sqlInfo = "SELECT kode_b, tanggal_transaksi, jumlah_m FROM transaksiho1 WHERE id_transaksi=?";
             $stmtInfo = $conn->prepare($sqlInfo);
             $stmtInfo->bind_param("i", $id_transaksi);
             $stmtInfo->execute();
@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sisa = $total_hargat - $bayar_post;
 
         // ============= UPDATE KE PEMBELIANHO1 BERDASARKAN J =============
-        $sqlUpdPemb = "UPDATE pembelianHO1 SET harga_m=?, ppn_m=?, hargat_m=?, sisa=?, inv=?, bayar=?, coa='21101' WHERE sj=?";
+        $sqlUpdPemb = "UPDATE pembelianho1 SET harga_m=?, ppn_m=?, hargat_m=?, sisa=?, inv=?, bayar=?, coa='21101' WHERE sj=?";
         $stmtPemb = $conn->prepare($sqlUpdPemb);
         $stmtPemb->bind_param("ddddsss", $total_harga, $total_ppn, $total_hargat, $sisa, $inv_post, $bayar_post, $j_value);
         $stmtPemb->execute();
@@ -175,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ===== AMBIL DATA UNTUK FORM (tanpa get_result) =====
 $sql = "SELECT id_transaksi, tanggal_transaksi, kode_b, nama_b, jumlah_m, harga_m, ppn_m, hargat_m
-        FROM transaksiHO1 WHERE sj=? AND jumlah_m>0 ";
+        FROM transaksiho1 WHERE sj=? AND jumlah_m>0 ";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $j_value);
 $stmt->execute();
@@ -197,7 +197,7 @@ while ($stmt->fetch()) {
 $stmt->close();
 
 // ===== AMBIL DATA INVOICE DAN BAYAR DARI PEMBELIANHO1 =====
-$sqlPembGet = "SELECT inv, bayar FROM pembelianHO1 WHERE sj=?";
+$sqlPembGet = "SELECT inv, bayar FROM pembelianho1 WHERE sj=?";
 $stmtPembGet = $conn->prepare($sqlPembGet);
 $stmtPembGet->bind_param("s", $j_value);
 $stmtPembGet->execute();

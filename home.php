@@ -136,8 +136,8 @@ try {
     $q4 = $pdo->query("SELECT COUNT(*) FROM (SELECT SJ FROM transaksiho1 WHERE jumlah_k > 0 AND j = 'jual' GROUP BY SJ HAVING SUM(harga_k) = 0) as t");
     $badge_counts[59] = (int) $q4->fetchColumn();
 
-    // 5. Pelunasan penjualan (ar.php) -> Sisa piutang > 0 (dari penjualanHO1)
-    $q5 = $pdo->query("SELECT COUNT(*) FROM penjualanHO1 WHERE sisa > 0");
+    // 5. Pelunasan penjualan (ar.php) -> Sisa piutang > 0 (dari penjualanho1)
+    $q5 = $pdo->query("SELECT COUNT(*) FROM penjualanho1 WHERE sisa > 0");
     $badge_counts[79] = (int) $q5->fetchColumn();
 
     // 6. Jurnal ditarik ke LK (jurnal.php) -> Belum posting
@@ -162,7 +162,7 @@ try {
 
         if (count($users) > 0) {
             $in_clause = str_repeat('?,', count($users) - 1) . '?';
-            $sql_ap = "SELECT COUNT(*) FROM penjualanHO1 WHERE sisa > 0 AND userinv IN ($in_clause)";
+            $sql_ap = "SELECT COUNT(*) FROM penjualanho1 WHERE sisa > 0 AND userinv IN ($in_clause)";
             $stmt_ap = $pdo->prepare($sql_ap);
             $stmt_ap->execute($users);
             $total_pending += (int) $stmt_ap->fetchColumn();
@@ -653,11 +653,11 @@ $menus = $filtered_menus;
                             $dynamic_badge = "";
                             $menu_name = trim($m['nama_menu']);
                             if ($menu_name === 'Verifikasi Order') {
-                                $stmt_badge = $pdo->query("SELECT COUNT(*) FROM penjualanHO1 WHERE J LIKE '%ORD%' AND (inv IS NULL OR inv = '')");
+                                $stmt_badge = $pdo->query("SELECT COUNT(*) FROM penjualanho1 WHERE J LIKE '%ORD%' AND (inv IS NULL OR inv = '')");
                                 $count = $stmt_badge->fetchColumn();
                                 if ($count > 0) $dynamic_badge = $count;
                             } elseif ($menu_name === 'Rekap SJ (RPC)') {
-                                $stmt_badge = $pdo->query("SELECT COUNT(*) FROM penjualanHO1 WHERE inv LIKE '%SJ%' AND (no_rpc IS NULL OR no_rpc = '')");
+                                $stmt_badge = $pdo->query("SELECT COUNT(*) FROM penjualanho1 WHERE inv LIKE '%SJ%' AND (no_rpc IS NULL OR no_rpc = '')");
                                 $count = $stmt_badge->fetchColumn();
                                 if ($count > 0) $dynamic_badge = $count;
                             }

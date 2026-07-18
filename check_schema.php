@@ -1,6 +1,6 @@
 <?php
 require 'config1.php';
-$tables = ['stock', 'penjualanHO1', 'rpc_header'];
+$tables = ['stock', 'penjualanho1', 'rpc_header'];
 foreach ($tables as $t) {
     echo "TABLE: $t\n";
     $res = $conn->query("DESCRIBE $t");

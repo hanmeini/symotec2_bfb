@@ -167,7 +167,7 @@ if ($_SESSION['location'] !== 'HO' && $_SESSION['location'] !== 'HO1') {
     $stmt_sales->close();
 }
 
-// Menentukan klausa WHERE tambahan untuk filter userinv jika dia sales (karena penjualanHO1 tidak menyimpan id_gudang secara langsung)
+// Menentukan klausa WHERE tambahan untuk filter userinv jika dia sales (karena penjualanho1 tidak menyimpan id_gudang secara langsung)
 $sales_filter = "";
 if ($is_sales) {
     $sales_filter = " AND userinv = '" . $conn->real_escape_string($_SESSION['username']) . "'";
@@ -186,7 +186,7 @@ $sql = "
         p.userbayar,
         IF(p.userinv IN ('admin', 'HO', 'HO1'), 'Pusat', UPPER(p.userinv)) as cabang
     FROM 
-        penjualanHO1 p
+        penjualanho1 p
     LEFT JOIN cust c ON p.cust = c.kode
     WHERE 
         DATE(p.tanggal_transaksi) BETWEEN ? AND ?$sales_filter

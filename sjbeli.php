@@ -81,7 +81,7 @@ $sql = "
         cus,
         MIN(tanggal_transaksi) AS tanggal,
         SUM(harga_m) AS total_harga
-    FROM transaksiHO1
+    FROM transaksiho1
     WHERE jumlah_m > 0
     GROUP BY SJ, cus
     ORDER BY (SUM(harga_m) = 0) DESC, tanggal DESC
