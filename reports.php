@@ -214,7 +214,7 @@ $summary = [];
 
 echo "<h2>Laporan Penjualan dari tanggal: " . htmlspecialchars($start_date) . " sampai " . htmlspecialchars($end_date) . "</h2>";
 
-echo "<table border='1' cellpadding='5' cellspacing='0'>
+$html_detail = ""; $html_detail .= "<table border='1' cellpadding='5' cellspacing='0'>
         <tr>
             <th>Tanggal</th>
             <th>No Inv</th>
@@ -253,7 +253,7 @@ while ($stmt->fetch()) {
         $summary_bank[$bank] += $bayar;
     }
 
-    echo "<tr>
+    $html_detail .= "<tr>
             <td>" . htmlspecialchars($tanggal_transaksi) . "</td>
             <td>" . htmlspecialchars($J) . "<br>" . htmlspecialchars($userinv) . "</td>
             <td>" . htmlspecialchars($cust) . "</td>
@@ -264,12 +264,12 @@ while ($stmt->fetch()) {
             <td>" . htmlspecialchars($cabang) . "</td>
         </tr>";
 }
-echo "</table>";
+$html_detail .= "</table>";
 
 $summary_bank = [];
 // Hitung summary_bank dari data sudah ter-fetch
 // Summary per cabang
-echo "<h2>Summary Per Cabang</h2><table border='1' cellpadding='5' cellspacing='0'>
+$html_cabang = ""; $html_cabang .= "<h2>Summary Per Cabang</h2><table border='1' cellpadding='5' cellspacing='0'>
         <tr>
             <th>Cabang</th>
             <th>Total Nota</th>
@@ -281,7 +281,7 @@ echo "<h2>Summary Per Cabang</h2><table border='1' cellpadding='5' cellspacing='
 $total_nota_all = $total_jumlah_all = $total_bayar_all = $total_sisa_all = 0;
 
 foreach ($summary as $cabang => $data) {
-    echo "<tr>
+    $html_cabang .= "<tr>
             <td>" . htmlspecialchars($cabang) . "</td>
             <td>" . $data['row_count'] . "</td>
             <td>" . number_format($data['total_jumlah'], 2) . "</td>
@@ -296,7 +296,7 @@ foreach ($summary as $cabang => $data) {
 }
 
 // Tambahkan baris total keseluruhan
-echo "<tr style='font-weight:bold; background-color:#eee;'>
+$html_cabang .= "<tr style='font-weight:bold; background-color:#eee;'>
         <td>TOTAL</td>
         <td>$total_nota_all</td>
         <td>" . number_format($total_jumlah_all, 2) . "</td>
@@ -304,7 +304,9 @@ echo "<tr style='font-weight:bold; background-color:#eee;'>
         <td>" . number_format($total_sisa_all, 2) . "</td>
     </tr>";
 
-echo "</table>";
+$html_cabang .= "</table>";
+
+echo $html_bank . "<br>" . $html_cabang . "<br><h2>Detail Tiap Penjualan</h2>" . $html_detail;
 
 $stmt->close();
 $conn->close();
