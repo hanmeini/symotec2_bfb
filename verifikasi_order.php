@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt_stock->close();
 
         // FETCH COA PIUTANG (Pengakuan Awal)
-        $coa_user = '11201'; // Selalu Piutang Dagang saat verifikasi (sebelum pelunasan)
+        $coa_user = '114001'; // Selalu Piutang Dagang saat verifikasi (sebelum pelunasan)
 
         // JURNAL A: PENGAKUAN PENJUALAN
         $ket_jurnal = "Penjualan POS " . $nomor_inv;
@@ -98,14 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // 2. Kredit: Penjualan
         $d = 0; $k = $dpp;
-        $coa = '41101';
+        $coa = '400001';
         $stmt_jurnal->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
         $stmt_jurnal->execute();
 
         // 3. Kredit: PPN Keluaran
         if ($ppn > 0) {
             $d = 0; $k = $ppn;
-            $coa = '21201';
+            $coa = '213001';
             $stmt_jurnal->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
             $stmt_jurnal->execute();
         }
@@ -113,12 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // 4. Debet: HPP & Kredit: Persediaan
         if ($total_hpp > 0) {
             $d = $total_hpp; $k = 0;
-            $coa = '51101';
+            $coa = '510';
             $stmt_jurnal->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
             $stmt_jurnal->execute();
 
             $d = 0; $k = $total_hpp;
-            $coa = '11301';
+            $coa = '115100';
             $stmt_jurnal->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
             $stmt_jurnal->execute();
         }
@@ -152,24 +152,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $stmt_jurnal_bfbs->execute();
                 
                 // Penjualan BFBS
-                $d = 0; $k = $bfbs_dpp; $coa = '41101';
+                $d = 0; $k = $bfbs_dpp; $coa = '400001';
                 $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
                 $stmt_jurnal_bfbs->execute();
                 
                 // PPN BFBS
                 if ($bfbs_ppn > 0) {
-                    $d = 0; $k = $bfbs_ppn; $coa = '21201';
+                    $d = 0; $k = $bfbs_ppn; $coa = '213001';
                     $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
                     $stmt_jurnal_bfbs->execute();
                 }
                 
                 // HPP & Persediaan BFBS (Sama dengan BFB)
                 if ($total_hpp > 0) {
-                    $d = $total_hpp; $k = 0; $coa = '51101';
+                    $d = $total_hpp; $k = 0; $coa = '510';
                     $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
                     $stmt_jurnal_bfbs->execute();
                     
-                    $d = 0; $k = $total_hpp; $coa = '11301';
+                    $d = 0; $k = $total_hpp; $coa = '115100';
                     $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_inv, $tanggal, $ket_jurnal, $coa, $d, $k, $nomor_inv);
                     $stmt_jurnal_bfbs->execute();
                 }

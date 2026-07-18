@@ -167,19 +167,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 $keterangan_jur = "Retur Pembelian " . $invoice_no;
                 
                 // 11203 (Titipan Supplier) - Debet (Mengurangi Hutang / Piutang)
-                $coa_titip = "11203"; $nama_titip = "Titipan Supplier"; $d_titip = $total_retur_harga; $k_titip = 0;
+                $coa_titip = "114003"; $nama_titip = "Titipan Supplier"; $d_titip = $total_retur_harga; $k_titip = 0;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_titip, $d_titip, $k_titip, $nama_titip);
                 $stmt_jur->execute();
                 
                 // 12102 (PPN Masukan) - Kredit
                 if ($total_retur_ppn > 0) {
-                    $coa_ppn = "12102"; $nama_ppn = "PPN Masukan"; $d_ppn = 0; $k_ppn = $total_retur_ppn;
+                    $coa_ppn = "118001"; $nama_ppn = "PPN Masukan"; $d_ppn = 0; $k_ppn = $total_retur_ppn;
                     $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_ppn, $d_ppn, $k_ppn, $nama_ppn);
                     $stmt_jur->execute();
                 }
 
                 // 11301 (Persediaan Barang Dagang) - Kredit
-                $coa_inv = "11301"; $nama_inv = "Persediaan Barang Dagang"; $d_inv = 0; $k_inv = $total_retur_dpp;
+                $coa_inv = "115100"; $nama_inv = "Persediaan Barang Dagang"; $d_inv = 0; $k_inv = $total_retur_dpp;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_inv, $d_inv, $k_inv, $nama_inv);
                 $stmt_jur->execute();
                 

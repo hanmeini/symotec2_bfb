@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 2. Kredit: 11201 Piutang
         $d = 0; $k = $bayar1;
-        $coa = '11201';
+        $coa = '114001';
         $stmt_jurnal->bind_param("ssssdds", $nomor_lunas, $tanggal, $ket_jurnal, $coa, $d, $k, $j_value);
         $stmt_jurnal->execute();
 
@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt_jurnal_bfbs->execute();
                     
                     // 2. Kredit Piutang
-                    $d = 0; $k = $bfbs_bayar_sekarang; $coa = '11201';
+                    $d = 0; $k = $bfbs_bayar_sekarang; $coa = '114001';
                     $stmt_jurnal_bfbs->bind_param("ssssdds", $nomor_lunas, $tanggal, $ket_jurnal, $coa, $d, $k, $j_value);
                     $stmt_jurnal_bfbs->execute();
                     

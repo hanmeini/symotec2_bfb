@@ -179,29 +179,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proses_retur'])) {
                 
                 // 41201 (Return Penjualan) - Debet
                 $keterangan_jur = "Retur Penjualan " . $invoice_no;
-                $coa_rp = "41201"; $nama_rp = "Retur Penjualan"; $d_rp = $total_retur_dpp; $k_rp = 0;
+                $coa_rp = "400002"; $nama_rp = "Retur Penjualan"; $d_rp = $total_retur_dpp; $k_rp = 0;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_rp, $d_rp, $k_rp, $nama_rp);
                 $stmt_jur->execute();
                 
                 // 21201 (PPN Keluaran) - Debet
                 if ($total_retur_ppn > 0) {
-                    $coa_ppn = "21201"; $nama_ppn = "PPN Keluaran"; $d_ppn = $total_retur_ppn; $k_ppn = 0;
+                    $coa_ppn = "213001"; $nama_ppn = "PPN Keluaran"; $d_ppn = $total_retur_ppn; $k_ppn = 0;
                     $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_ppn, $d_ppn, $k_ppn, $nama_ppn);
                     $stmt_jur->execute();
                 }
                 
                 // 11201 (Piutang Dagang) - Kredit
-                $coa_titip = "11201"; $nama_titip = "Piutang Dagang"; $d_titip = 0; $k_titip = $total_retur_harga;
+                $coa_titip = "114001"; $nama_titip = "Piutang Dagang"; $d_titip = 0; $k_titip = $total_retur_harga;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_titip, $d_titip, $k_titip, $nama_titip);
                 $stmt_jur->execute();
                 
                 // 11301 (Persediaan Barang Dagang) - Debet
-                $coa_inv = "11301"; $nama_inv = "Persediaan Barang Dagang"; $d_inv = $total_retur_hpp; $k_inv = 0;
+                $coa_inv = "115100"; $nama_inv = "Persediaan Barang Dagang"; $d_inv = $total_retur_hpp; $k_inv = 0;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_inv, $d_inv, $k_inv, $nama_inv);
                 $stmt_jur->execute();
                 
                 // 51101 (Harga Pokok Penjualan) - Kredit
-                $coa_hpp = "51101"; $nama_hpp = "Harga Pokok Penjualan"; $d_hpp = 0; $k_hpp = $total_retur_hpp;
+                $coa_hpp = "510"; $nama_hpp = "Harga Pokok Penjualan"; $d_hpp = 0; $k_hpp = $total_retur_hpp;
                 $stmt_jur->bind_param("ssssdds", $j_retur, $tgl_jurnal, $keterangan_jur, $coa_hpp, $d_hpp, $k_hpp, $nama_hpp);
                 $stmt_jur->execute();
                 
