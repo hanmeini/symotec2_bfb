@@ -1,14 +1,19 @@
 <?php
-require 'config1.php';
-$tables = ['stock', 'penjualanho1', 'rpc_header'];
-foreach ($tables as $t) {
-    echo "TABLE: $t\n";
-    $res = $conn->query("DESCRIBE $t");
-    if($res) {
-        while($r = $res->fetch_assoc()) echo $r['Field'].' - '.$r['Type']."\n";
-    } else {
-        echo "Table does not exist.\n";
+$conn_mkb = new mysqli('localhost', 'root', '', 'symotec2_mkb');
+$res = $conn_mkb->query("SHOW TABLES");
+if ($res) {
+    while ($r = $res->fetch_row()) {
+        if (strpos($r[0], 'po') !== false || strpos($r[0], 'purchase') !== false || strpos($r[0], 'order') !== false) {
+            echo "MKB: " . $r[0] . "\n";
+        }
     }
-    echo "------------------\n";
 }
 ?>
+
+
+
+
+
+
+
+

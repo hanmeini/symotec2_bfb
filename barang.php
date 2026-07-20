@@ -278,10 +278,10 @@ $conn = new mysqli($servername, $db_username, $db_password, $database);
 
     while ($row = $result->fetch_assoc()) {
         echo "<tr>";
-        echo "<td>" . htmlspecialchars($row["kode_b"]) . "</td>";
-        echo "<td>" . htmlspecialchars($row["nama_b"]) . "</td>";
-        echo "<td>" . htmlspecialchars($row["jenis"]) . "</td>";
-        echo "<td>" . htmlspecialchars($row["brand"]) . "</td>";
+        echo "<td>" . htmlspecialchars($row["kode_b"] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($row["nama_b"] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($row["jenis"] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($row["brand"] ?? '') . "</td>";
         
         echo "<td style='text-align: center; font-weight: bold; font-size: 14px;'>" . (int)$row["stok"] . "</td>";
         
@@ -291,7 +291,7 @@ $conn = new mysqli($servername, $db_username, $db_password, $database);
  
         echo "<td style='text-align: center; white-space: nowrap;'>
                 <form method='POST' action='update_harga_jual.php' style='display:flex; align-items:center; justify-content:center; gap:5px; margin:0;'>
-                    <input type='hidden' name='kode_b' value='" . htmlspecialchars($row["kode_b"]) . "'>
+                    <input type='hidden' name='kode_b' value='" . htmlspecialchars($row["kode_b"] ?? '') . "'>
                     <input type='hidden' name='old_harga' value='" . $row["hargat_b"] . "'>
                     <input type='number' name='new_harga' value='" . $row["hargat_b"] . "' style='width: 90px; padding: 4px; text-align:right; margin:0;' step='0.01' required>
                     <button type='submit' style='background-color: green; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;' title='Update Harga Normal'>
@@ -302,7 +302,7 @@ $conn = new mysqli($servername, $db_username, $db_password, $database);
 
         echo "<td style='text-align: center; white-space: nowrap;'>
                 <form method='POST' action='update_harga_retail.php' style='display:flex; align-items:center; justify-content:center; gap:5px; margin:0;'>
-                    <input type='hidden' name='kode_b' value='" . htmlspecialchars($row["kode_b"]) . "'>
+                    <input type='hidden' name='kode_b' value='" . htmlspecialchars($row["kode_b"] ?? '') . "'>
                     <input type='number' name='harga_retail' value='" . (isset($row["harga_retail"]) ? $row["harga_retail"] : 0) . "' style='width: 90px; padding: 4px; text-align:right; margin:0;' step='0.01' required>
                     <button type='submit' style='background-color: teal; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer;' title='Update Harga Retail'>
                         <i class='fa-solid fa-save'></i>
