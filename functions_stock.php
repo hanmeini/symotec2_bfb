@@ -56,7 +56,8 @@ function recalculate_stock_history($conn, $kodeb) {
             
             // Stok gudang (sg) berkurang HANYA JIKA SUDAH VERIFIKASI ADMIN (SJ diterbitkan)
             // Bisa dicek dari nomor $row['sj'] yang diawali 'SJ' atau 'INV' (bukan lagi 'ORD')
-            if (strpos($row['sj'], 'SJ') !== false || strpos($row['sj'], 'INV') !== false) {
+            $sj_val = $row['sj'] ?? '';
+            if (strpos($sj_val, 'SJ') !== false || strpos($sj_val, 'INV') !== false) {
                 $sg_baru = $sg_current - $jk;
             } else {
                 $sg_baru = $sg_current; // Masih berupa pesanan POS (ORD), stok gudang tetap
