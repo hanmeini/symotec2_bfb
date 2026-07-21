@@ -30,15 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userinv = $_POST['username1'] ?? $_SESSION['username'] ?? 'system';
         $jenis_penjualan = $_POST['jenis_penjualan'] ?? 'grosir';
         
+        // Insert ke penjualanho1 (berlaku untuk semua jenis penjualan, baik grosir maupun retail)
+        $stmt = $conn->prepare("INSERT INTO penjualanho1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $dpp, $ppn, $total_harga, $userinv, $po);
+        $stmt->execute();
+        $stmt->close();
+        
         // Matikan trigger sinkronisasi otomatis ke BFBS JIKA ini adalah Retail,
         // Karena kita akan menyuntikkan data Retail secara manual ke BFBS dengan harga Normal.
         if ($jenis_penjualan === 'retail') {
             $conn->query("SET @disable_trigger = 1");
-            
-            $stmt = $conn->prepare("INSERT INTO penjualanho1 (tanggal_transaksi, J, cust, diskon, harga, ppn, jumlah, userinv, po) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssddddss", $tanggal, $nomor, $cust, $diskon, $dpp, $ppn, $total_harga, $userinv, $po);
-            $stmt->execute();
-            $stmt->close();
         }
         
         // Menghapus blok auto-lunas pembayaranho1 agar sesuai dengan alur ATK (Pelunasan diproses manual)
