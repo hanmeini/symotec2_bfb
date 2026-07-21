@@ -62,8 +62,9 @@ if ($id_gudang == 0) {
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $limit, $offset);
 } else {
-    // Gudang Cabang (1-5)
-    $judul_halaman = "Laporan Stok Barang - Gudang " . $id_gudang;
+    // Gudang Cabang
+    // judul_halaman akan di-set setelah ambil master_gudang
+    $judul_halaman = "Laporan Stok Barang";
     
     // Hitung total data untuk Cabang
     $count_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM (
@@ -96,6 +97,15 @@ $result = $stmt->get_result();
 
 $total_pages = max(1, ceil($total_data / $limit));
 
+// Ambil daftar gudang dari master_gudang
+$gudang_list = [];
+$res_gdg = $conn->query("SELECT id_gudang, nama_gudang FROM master_gudang ORDER BY id_gudang");
+while ($g = $res_gdg->fetch_assoc()) {
+    $gudang_list[$g['id_gudang']] = $g['nama_gudang'];
+}
+
+$nama_gudang_aktif = isset($gudang_list[$id_gudang]) ? $gudang_list[$id_gudang] : "Semua Gudang";
+$judul_halaman = "Laporan Stok Barang - " . $nama_gudang_aktif;
 $back_url = ($id_gudang > 0) ? "gudang/home.php?id=" . $id_gudang : "home.php";
 
 ?>
@@ -134,12 +144,27 @@ $back_url = ($id_gudang > 0) ? "gudang/home.php?id=" . $id_gudang : "home.php";
 <body>
 
 <div class="top-bar">
-    <a href="home.php"><i class="fas fa-home"></i></a>
-    <a href="<?= $back_url ?>"><i class="fa-solid fa-arrow-left"></i></a>
+    <?php $pos_link = 'pos.php' . (!empty($_SESSION['pos_gudang']) ? '?id_gudang=' . (int)$_SESSION['pos_gudang'] : ''); ?>
+    <a href="<?php echo $pos_link; ?>"><i class="fas fa-home"></i></a>
+    <a href="<?php echo $back_url; ?>"><i class="fa-solid fa-arrow-left"></i></a>
 </div>
 
 <div class="container">
     <h2><?= htmlspecialchars($judul_halaman) ?></h2>
+
+    <!-- Tab Pilih Gudang -->
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:15px;">
+        <a href="stock.php?id=0" style="padding:6px 14px;border-radius:20px;text-decoration:none;font-size:13px;font-weight:bold;
+            background:<?= $id_gudang==0 ? '#7a0000' : '#e0e0e0' ?>;
+            color:<?= $id_gudang==0 ? 'white' : '#333' ?>;" >Semua</a>
+        <?php foreach ($gudang_list as $gid => $gnama): ?>
+        <a href="stock.php?id=<?= $gid ?>" style="padding:6px 14px;border-radius:20px;text-decoration:none;font-size:13px;font-weight:bold;
+            background:<?= $id_gudang==$gid ? '#7a0000' : '#e0e0e0' ?>;
+            color:<?= $id_gudang==$gid ? 'white' : '#333' ?>;">
+            <?= htmlspecialchars($gnama) ?>
+        </a>
+        <?php endforeach; ?>
+    </div>
 
     <div class="search-box">
         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari kode barang atau nama...">
