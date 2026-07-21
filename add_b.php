@@ -198,6 +198,12 @@ require_once 'config1.php';
                     ?>
                 </select>
 
+                <label for="rasio_tengah">1 Lusin = berapa Pcs?</label>
+                <input type="number" id="rasio_tengah" name="rasio_tengah" step="0.01" value="12" required>
+
+                <label for="rasio_besar">1 Box = berapa Pcs?</label>
+                <input type="number" id="rasio_besar" name="rasio_besar" step="0.01" value="24" required>
+
                 <label for="dpp">Harga Beli:</label>
                 <input type="number" id="dpp" name="dpp" step="0.01" required>
 

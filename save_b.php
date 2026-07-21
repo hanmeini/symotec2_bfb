@@ -32,9 +32,16 @@ if ($ppn_beli_type === 11) {
 }
 $hargat_m = $dpp;
 
+// Tambahan satuan & rasio
+$satuan_kecil = 'Pcs';
+$satuan_tengah = 'Lusin';
+$satuan_besar = 'Box';
+$rasio_tengah = (float)$_POST['rasio_tengah'];
+$rasio_besar = (float)$_POST['rasio_besar'];
+
 // Persiapkan query untuk menyimpan data
-$stmt = $conn->prepare("INSERT INTO b (kode_b, nama_b, jenis, brand, harga_b, ppn_b, hargat_b, dpp, harga_m, ppn_m, hargat_m, harga_retail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->bind_param("ssssdddddddd", $kode_b, $nama_b, $jenis, $brand, $harga_b, $ppn_b, $hargat_b, $dpp, $harga_m, $ppn_m, $hargat_m, $harga_retail);
+$stmt = $conn->prepare("INSERT INTO b (kode_b, nama_b, jenis, brand, harga_b, ppn_b, hargat_b, dpp, harga_m, ppn_m, hargat_m, harga_retail, satuan_kecil, satuan_tengah, rasio_tengah, satuan_besar, rasio_besar) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->bind_param("ssssddddddddssdsd", $kode_b, $nama_b, $jenis, $brand, $harga_b, $ppn_b, $hargat_b, $dpp, $harga_m, $ppn_m, $hargat_m, $harga_retail, $satuan_kecil, $satuan_tengah, $rasio_tengah, $satuan_besar, $rasio_besar);
 
 // Eksekusi query
 if ($stmt->execute()) {

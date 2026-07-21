@@ -46,6 +46,7 @@ $tanggal_transaksi = $_POST['tanggal_transaksi'];
 $kode_b = $_POST['kode_b'];
 $nama_b = $_POST['nama_b'];
 $jumlah_m = $_POST['jumlah_m'];
+$satuan_arr = $_POST['satuan'] ?? [];
 $sup = $_POST['sup'];
 $sj = $_POST['sj'];
 $id_gudang = $_POST['id_gudang'] ?? 0;
@@ -84,17 +85,38 @@ $conn->begin_transaction();
 
 try {
     // 1. Insert ke transaksiho1 (Ledger Transaksi)
-    $stmtTransaksi = $conn->prepare("INSERT INTO transaksiho1 (tanggal_transaksi, J, kode_b, nama_b, jumlah_m, cus, user, sj, cabang, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmtTransaksi = $conn->prepare("INSERT INTO transaksiho1 (tanggal_transaksi, J, kode_b, nama_b, jumlah_m, cus, user, sj, cabang, id_gudang, format_qty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     // 2. Insert ke stock (Ledger Inventori)
-    $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, J, sup, kodeb, jumlah_m, userid, sj, id_gudang) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmtStock = $conn->prepare("INSERT INTO stock (tanggal_transaksi, J, sup, kodeb, jumlah_m, userid, sj, id_gudang, format_qty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     foreach ($kode_b as $index => $kode_barang) {
         $nama_barang = $nama_b[$index];
-        $qty_masuk = $jumlah_m[$index];
+        $qty_input = (float)$jumlah_m[$index];
+        $satuan = $satuan_arr[$index] ?? 'Pcs';
+        
+        // Ambil rasio dari master barang
+        $rasio_besar = 0;
+        $rasio_tengah = 0;
+        $q_rasio = $conn->query("SELECT rasio_besar, rasio_tengah FROM b WHERE kode_b = '" . $conn->real_escape_string($kode_barang) . "'");
+        if ($q_rasio && $r_rasio = $q_rasio->fetch_assoc()) {
+            $rasio_besar = (float)$r_rasio['rasio_besar'];
+            $rasio_tengah = (float)$r_rasio['rasio_tengah'];
+        }
+        
+        // Hitung qty dalam Pcs
+        $qty_masuk = $qty_input;
+        if ($satuan === 'Box' && $rasio_besar > 0) {
+            $qty_masuk = $qty_input * $rasio_besar;
+        } elseif ($satuan === 'Lusin' && $rasio_tengah > 0) {
+            $qty_masuk = $qty_input * $rasio_tengah;
+        }
+
+        // Hitung format rasio (contoh: 1.5.5)
+        $format_qty = format_konversi($qty_masuk, $rasio_besar, $rasio_tengah);
 
         // Eksekusi Ledger Transaksi
-        $stmtTransaksi->bind_param("ssssdssssi", 
+        $stmtTransaksi->bind_param("ssssdssssis", 
             $tanggal_transaksi, 
             $Jb, 
             $kode_barang, 
@@ -104,14 +126,15 @@ try {
             $userin,
             $sj,
             $nama_gudang,
-            $id_gudang
+            $id_gudang,
+            $format_qty
         );
         if (!$stmtTransaksi->execute()) {
             throw new Exception("Gagal insert ke transaksiho1: " . $stmtTransaksi->error);
         }
 
         // Eksekusi Ledger Inventori (Stock)
-        $stmtStock->bind_param("ssssdssi", 
+        $stmtStock->bind_param("ssssdssis", 
             $tanggal_transaksi, 
             $Jb,
             $sup,
@@ -119,7 +142,8 @@ try {
             $qty_masuk,
             $userin,
             $sj,
-            $id_gudang
+            $id_gudang,
+            $format_qty
         );
         if (!$stmtStock->execute()) {
             throw new Exception("Gagal insert ke stock: " . $stmtStock->error);

@@ -211,6 +211,13 @@ input {
                     <input type="number" name="jumlah_m[]" min="0" value="0" oninput="calculatePPN(this); updateTotals();" required>
                 </td>
                 <td>
+                    <select name="satuan[]" required style="padding: 5px; border-radius: 4px;">
+                        <option value="Pcs">Pcs</option>
+                        <option value="Lusin">Lusin</option>
+                        <option value="Box">Box</option>
+                    </select>
+                </td>
+                <td>
                     <input type="file" id="gambar_b" name="gambar_b[]" accept="image/*" onchange="displayFileExtension(this)">
                     <div id="fileInfo" style="color: green; display: none;"></div>
                 </td>
@@ -337,7 +344,7 @@ function setsSupCode(kode, nama) {
                         <th>Kode Barang</th>
                         <th>Nama Barang</th>
                         <th>Jumlah</th>
-                       
+                        <th>Satuan</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -353,7 +360,13 @@ function setsSupCode(kode, nama) {
                         <td>
                             <input type="number" name="jumlah_m[]" min="0" value="0" oninput="calculatePPN(this); updateTotals();" required>
                         </td>
-                        
+                        <td>
+                            <select name="satuan[]" required style="padding: 5px; border-radius: 4px;">
+                                <option value="Pcs">Pcs</option>
+                                <option value="Lusin">Lusin</option>
+                                <option value="Box">Box</option>
+                            </select>
+                        </td>
                         <td>
                             <button type="button" onclick="removeItem(this)">
                                 <i class="fas fa-trash"></i>

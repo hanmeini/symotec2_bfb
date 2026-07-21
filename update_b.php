@@ -37,9 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $hargat_m = $dpp;
 
+    // Tambahan rasio
+    $rasio_tengah = isset($_POST['rasio_tengah']) ? (float)$_POST['rasio_tengah'] : 12;
+    $rasio_besar = isset($_POST['rasio_besar']) ? (float)$_POST['rasio_besar'] : 24;
+
     // Update query
-    $stmt = $conn->prepare("UPDATE b SET nama_b = ?, jenis = ?, brand = ?, harga_b = ?, ppn_b = ?, hargat_b = ?, dpp = ?, harga_m = ?, ppn_m = ?, hargat_m = ?, harga_retail = ? WHERE id = ?");
-    $stmt->bind_param("sssddddddddi", $nama_b, $jenis, $brand, $harga_b, $ppn_b, $hargat_b, $dpp, $harga_m, $ppn_m, $hargat_m, $harga_retail, $id);
+    $stmt = $conn->prepare("UPDATE b SET nama_b = ?, jenis = ?, brand = ?, harga_b = ?, ppn_b = ?, hargat_b = ?, dpp = ?, harga_m = ?, ppn_m = ?, hargat_m = ?, harga_retail = ?, rasio_tengah = ?, rasio_besar = ? WHERE id = ?");
+    $stmt->bind_param("sssddddddddddi", $nama_b, $jenis, $brand, $harga_b, $ppn_b, $hargat_b, $dpp, $harga_m, $ppn_m, $hargat_m, $harga_retail, $rasio_tengah, $rasio_besar, $id);
 
     if ($stmt->execute()) {
         echo "Data berhasil diperbarui!";

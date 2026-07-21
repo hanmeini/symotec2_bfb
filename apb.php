@@ -202,6 +202,7 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
         $stmtJurnal = $conn->prepare("
             INSERT INTO jurnal
             (
+                journal_number,
                 jurnal_sementara,
                 tanggal,
                 keterangan,
@@ -213,7 +214,7 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
                 supcust
             )
             VALUES
-            (?,?,?,?,?,?,?,?,?)
+            (?,?,?,?,?,?,?,?,?,?)
         ");
 
         $keterangan = "Pembayaran AP BANK ".$invoice;
@@ -227,7 +228,8 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
         $kredit_hutang = 0;
 
         $stmtJurnal->bind_param(
-            "sssssddss",
+            "ssssssddss",
+            $kodeCOS,
             $kodeCOS,
             $tanggal,
             $keterangan,
@@ -250,7 +252,8 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
         $kredit_bank = $bayar;
 
         $stmtJurnal->bind_param(
-            "sssssddss",
+            "ssssssddss",
+            $kodeCOS,
             $kodeCOS,
             $tanggal,
             $keterangan,
@@ -275,8 +278,9 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
             $kredit_pph = $pph;
 
             $stmtJurnal->bind_param(
-                "sssssddss",
-                $kodeCOS,
+                "ssssssddss",
+            $kodeCOS,
+            $kodeCOS,
                 $tanggal,
                 $keterangan,
                 $coa_pph,
@@ -309,8 +313,9 @@ if($biaya_bank > 0){
     $kredit_beban_bank = 0;
 
     $stmtJurnal->bind_param(
-        "sssssddss",
-        $kodeCOS,
+        "ssssssddss",
+            $kodeCOS,
+            $kodeCOS,
         $tanggal,
         $keterangan,
         $coa_beban_bank,
@@ -329,8 +334,9 @@ if($biaya_bank > 0){
     $kredit_bank_admin = $biaya_bank;
 
     $stmtJurnal->bind_param(
-        "sssssddss",
-        $kodeCOS,
+        "ssssssddss",
+            $kodeCOS,
+            $kodeCOS,
         $tanggal,
         $keterangan,
         $coa_bank,
@@ -366,7 +372,7 @@ if($biaya_bank > 0){
             userid
         )
         VALUES
-        (?,?,?,?,?,?,?,?,?)
+        (?,?,?,?,?,?,?,?,?,?)
         ");
 
         $stmtBayar->bind_param(

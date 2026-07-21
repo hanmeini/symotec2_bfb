@@ -209,6 +209,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $stmtJurnal = $conn->prepare("
             INSERT INTO jurnal
             (
+                journal_number,
                 jurnal_sementara,
                 tanggal,
                 keterangan,
@@ -220,7 +221,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 supcust
             )
             VALUES
-            (?,?,?,?,?,?,?,?,?)
+            (?,?,?,?,?,?,?,?,?,?)
         ");
 
         if(!$stmtJurnal){
@@ -238,7 +239,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $kredit_hutang = 0;
 
         $stmtJurnal->bind_param(
-            "sssssddss",
+            "ssssssddss",
+            $kodeCOS,
             $kodeCOS,
             $tanggal,
             $keterangan,
@@ -261,7 +263,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $kredit_cash = $bayar;
 
         $stmtJurnal->bind_param(
-            "sssssddss",
+            "ssssssddss",
+            $kodeCOS,
             $kodeCOS,
             $tanggal,
             $keterangan,
@@ -286,8 +289,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
             $kredit_pph = $pph;
 
             $stmtJurnal->bind_param(
-                "sssssddss",
-                $kodeCOS,
+                "ssssssddss",
+            $kodeCOS,
+            $kodeCOS,
                 $tanggal,
                 $keterangan,
                 $coa_pph,

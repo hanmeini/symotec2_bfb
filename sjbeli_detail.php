@@ -174,12 +174,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ===== AMBIL DATA UNTUK FORM (tanpa get_result) =====
-$sql = "SELECT id_transaksi, tanggal_transaksi, kode_b, nama_b, jumlah_m, harga_m, ppn_m, hargat_m
+$sql = "SELECT id_transaksi, tanggal_transaksi, kode_b, nama_b, jumlah_m, harga_m, ppn_m, hargat_m, format_qty
         FROM transaksiho1 WHERE sj=? AND jumlah_m>0 ";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $j_value);
 $stmt->execute();
-$stmt->bind_result($id_transaksi, $tanggal_transaksi, $kode_b, $nama_b, $jumlah_m, $harga_m, $ppn_m, $hargat_m);
+$stmt->bind_result($id_transaksi, $tanggal_transaksi, $kode_b, $nama_b, $jumlah_m, $harga_m, $ppn_m, $hargat_m, $format_qty);
 
 $rows = [];
 while ($stmt->fetch()) {
@@ -192,6 +192,7 @@ while ($stmt->fetch()) {
         'harga_m'           => $harga_m,
         'ppn_m'             => $ppn_m,
         'hargat_m'          => $hargat_m,
+        'format_qty'        => $format_qty,
     ];
 }
 $stmt->close();
@@ -258,7 +259,10 @@ foreach ($rows as $row): ?>
   <td><?php echo htmlspecialchars($row['tanggal_transaksi']); ?></td>
   <td><?php echo htmlspecialchars($row['kode_b']); ?></td>
   <td><?php echo htmlspecialchars($row['nama_b']); ?></td>
-  <td><input type="text" class="qty" name="jumlah_m[]" value="<?php echo htmlspecialchars(str_replace(',', '.', $row['jumlah_m'] ?? '0')); ?>" oninput="calc()" style="width:100px;"></td>
+  <td>
+      <input type="text" class="qty" name="jumlah_m[]" value="<?php echo htmlspecialchars(str_replace(',', '.', $row['jumlah_m'] ?? '0')); ?>" oninput="calc()" style="width:70px;">
+      <br><small style="color:gray;"><?php echo htmlspecialchars($row['format_qty'] ?? ''); ?></small>
+  </td>
   <td><input type="text" class="harga" name="harga_m[]" value="<?php echo htmlspecialchars(str_replace(',', '.', $row['harga_m'] ?? '0')); ?>" oninput="calc()" style="width:120px;"></td>
   <td><input type="text" class="ppn" name="ppn_m[]" value="<?php echo htmlspecialchars(str_replace(',', '.', $row['ppn_m'] ?? '0')); ?>" oninput="calc()" style="width:100px;"></td>
   <td class="row-total"><?php echo htmlspecialchars($row['hargat_m']); ?></td>

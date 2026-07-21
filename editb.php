@@ -204,6 +204,12 @@ $ppn_beli_type = ($barang['ppn_m'] > 0) ? 11 : 0;
                     ?>
                 </select>
 
+                <label for="rasio_tengah">1 Lusin = berapa Pcs?</label>
+                <input type="number" id="rasio_tengah" name="rasio_tengah" value="<?= (float)($barang['rasio_tengah'] ?? 12) ?>" step="0.01" required>
+
+                <label for="rasio_besar">1 Box = berapa Pcs?</label>
+                <input type="number" id="rasio_besar" name="rasio_besar" value="<?= (float)($barang['rasio_besar'] ?? 24) ?>" step="0.01" required>
+
                 <label for="dpp">Harga Beli:</label>
                 <input type="number" id="dpp" name="dpp" value="<?= (float)$barang['dpp'] ?>" step="0.01" required>
 
