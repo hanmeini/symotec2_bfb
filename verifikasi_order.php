@@ -183,10 +183,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         $conn->commit();
-        $message = "<div class='alert alert-success d-flex justify-content-between align-items-center'>
-            <span>Order {$ord_nomor} berhasil diverifikasi menjadi INV: {$nomor_inv} dan SJ: {$nomor_sj}. Jurnal berhasil dibuat.</span>
-            <a href='pelunasan.php?J={$nomor_inv}' class='btn btn-sm btn-success fw-bold'>Bayar / Lunas &rarr;</a>
-        </div>";
+        header('Location: pelunasan.php?J=' . urlencode($nomor_inv));
+        exit();
     } catch (Exception $e) {
         $conn->rollback();
         $message = "<div class='alert alert-danger'>Gagal verifikasi: " . $e->getMessage() . "</div>";

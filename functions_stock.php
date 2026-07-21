@@ -46,13 +46,20 @@ function recalculate_stock_history($conn, $kodeb) {
 
         if ($jk > 0) {
             // Keluar
-            $s_baru = $s_current - $jk;
             
-            // Cek apakah barang sudah dicetak RPC-nya (keluar gudang)
+            // Stok sistem (s) berkurang HANYA JIKA RPC SUDAH DICETAK
             if (!empty($row['no_rpc'])) {
+                $s_baru = $s_current - $jk;
+            } else {
+                $s_baru = $s_current; // Belum cetak RPC, stok sistem tetap
+            }
+            
+            // Stok gudang (sg) berkurang HANYA JIKA SUDAH VERIFIKASI ADMIN (SJ diterbitkan)
+            // Bisa dicek dari nomor $row['sj'] yang diawali 'SJ' atau 'INV' (bukan lagi 'ORD')
+            if (strpos($row['sj'], 'SJ') !== false || strpos($row['sj'], 'INV') !== false) {
                 $sg_baru = $sg_current - $jk;
             } else {
-                $sg_baru = $sg_current; // Belum dicetak RPC, stok fisik gudang masih ada
+                $sg_baru = $sg_current; // Masih berupa pesanan POS (ORD), stok gudang tetap
             }
 
             $hpp = $r_current; // HPP diambil dari harga rata-rata saat ini

@@ -1,8 +1,1 @@
-<?php
-$conn = new mysqli('127.0.0.1', 'root', '');
-if ($conn->connect_error) die("Koneksi gagal: " . $conn->connect_error);
-$res = $conn->query("SHOW DATABASES LIKE '%bfb%'");
-while($row = $res->fetch_array()) {
-    echo $row[0] . "\n";
-}
-?>
+<?php require "config1.php"; $res = $conn->query("SELECT id_transaksi, J, inv, tanggal_transaksi FROM penjualanho1 ORDER BY id_transaksi DESC LIMIT 5"); while($r = $res->fetch_assoc()) print_r($r);
